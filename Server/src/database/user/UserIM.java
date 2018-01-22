@@ -3,23 +3,15 @@ package database.user;
 import database.AuthenticationData;
 
 public class UserIM implements User {
-    private AuthenticationData authenticationData;
+    private int id;
 
     private String name;
 
     private String email;
 
-    private int id;
-
-    public UserIM(AuthenticationData authenticationData, String name, String email) {
-        this.authenticationData = authenticationData;
+    public UserIM(String name, String email) {
         this.name = name;
         this.email = email;
-    }
-
-    @Override
-    public AuthenticationData getAuthenticationData() {
-        return authenticationData;
     }
 
     @Override
@@ -35,12 +27,6 @@ public class UserIM implements User {
     @Override
     public String getEmail() {
         return email;
-    }
-
-    @Override
-    public boolean setPassword(char[] password) {
-        authenticationData.setPassword(password);
-        return true;
     }
 
     @Override

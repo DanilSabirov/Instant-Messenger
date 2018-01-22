@@ -8,8 +8,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ServerIM implements Server {
+    private static Logger log = Logger.getLogger(ServerIM.class.getName());
+
     private Database database;
 
     private int port;
@@ -23,15 +27,15 @@ public class ServerIM implements Server {
     }
 
     public void start(){
-        System.out.println("Server started");
+        log.info("Server started");
         ExecutorService executor = Executors.newCachedThreadPool();
         while (Thread.currentThread().getState() != Thread.State.TERMINATED){
             try {
                 Socket client = serverSocket.accept();
                 executor.submit(new Listener(client, this));
-                System.out.println("New connection");
+                log.info("New connection");
             } catch (IOException e) {
-                e.printStackTrace();
+                log.log(Level.SEVERE, "Exception: ", e);
                 return;
             }
         }
@@ -53,8 +57,8 @@ public class ServerIM implements Server {
     }
 
     @Override
-    public boolean register(User user) {
-        if (database.addUser(user)){
+    public boolean register(User user, AuthenticationData authenticationData) {
+        if (database.addUser(user, authenticationData)){
             return true;
         }
         return false;

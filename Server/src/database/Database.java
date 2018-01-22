@@ -4,7 +4,7 @@ import database.dialog.Dialog;
 import database.user.User;
 
 public interface Database {
-    boolean addUser(User user);
+    boolean addUser(User user, AuthenticationData authenticationData);
 
     boolean removeUser(String name);
 

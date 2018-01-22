@@ -7,7 +7,7 @@ public interface Server {
 
     int authenticate(AuthenticationData authenticationData);
 
-    boolean register(User user);
+    boolean register(User user, AuthenticationData authenticationData);
 
     void start();
 }

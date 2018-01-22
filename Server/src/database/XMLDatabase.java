@@ -6,7 +6,6 @@ import database.user.User;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 
 public class XMLDatabase implements Database {
     private Path pathToRoot;
@@ -22,7 +21,7 @@ public class XMLDatabase implements Database {
     }
 
     @Override
-    public boolean addUser(User user) {
+    public boolean addUser(User user, AuthenticationData authenticationData) {
         return false;
     }
 
