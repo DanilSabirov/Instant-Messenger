@@ -1,7 +1,5 @@
 package database.user;
 
-import database.AuthenticationData;
-
 public class UserIM implements User {
     private int id;
 
@@ -9,7 +7,7 @@ public class UserIM implements User {
 
     private String email;
 
-    public UserIM(String name, String email) {
+    public UserIM(int id, String name, String email) {
         this.name = name;
         this.email = email;
     }
@@ -32,5 +30,14 @@ public class UserIM implements User {
     @Override
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    @Override
+    public String toString() {
+        return "UserIM{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                '}';
     }
 }

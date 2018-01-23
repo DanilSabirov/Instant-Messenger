@@ -6,8 +6,6 @@ import client.Main;
 import client.gui.view.AuthorizationWindow;
 import javafx.fxml.FXMLLoader;
 
-import java.io.IOException;
-
 public class AuthorizationController {
     private Client model;
 
@@ -28,7 +26,7 @@ public class AuthorizationController {
         if(login.length() != 0 && password.length != 0){
             window.setDisableButton(true);
             if (model.authenticate(new AuthenticationData(login, password)) == -1){
-                System.out.println("Accept");
+                System.out.println("Accepted");
                 Main.setMainScene();
             }
             window.setDisableButton(false);

@@ -2,7 +2,6 @@ package client.gui.view;
 
 import client.Client;
 import client.gui.MainController;
-import client.message.UserMessage;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;

@@ -2,7 +2,6 @@ package client;
 
 import client.gui.AuthorizationController;
 import client.gui.MainController;
-import client.gui.view.AuthorizationWindow;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -19,7 +18,15 @@ public class Main extends Application{
 
     public static void main(String[] args) throws UnknownHostException {
         client = new ClientIM(InetAddress.getLocalHost(), 4444);
-        if (!client.connect()) Runtime.getRuntime().exit(-1);
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (!client.connect()) {
+                    Runtime.getRuntime().exit(-1);
+                }
+            }
+        });
+        thread.start();
         launch(args);
     }
 
@@ -27,6 +34,11 @@ public class Main extends Application{
     public void start(Stage primaryStage) throws Exception {
         stage = primaryStage;
         setAuthorizationScene();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        Runtime.getRuntime().exit(0);
     }
 
     public static void setAuthorizationScene() {

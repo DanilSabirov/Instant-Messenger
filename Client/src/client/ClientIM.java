@@ -2,14 +2,14 @@ package client;
 
 import client.message.Message;
 import client.user.User;
+import client.user.UserIM;
 
-import java.io.BufferedReader;
+import javax.xml.stream.*;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.util.List;
 
 public class ClientIM implements Client {
@@ -19,9 +19,21 @@ public class ClientIM implements Client {
 
     private int port;
 
-    private BufferedReader serverInput;
+    private InputStream serverInput;
 
-    private PrintWriter serverOutput;
+    private OutputStream serverOutput;
+
+    private XMLInputFactory inputFactory;
+
+    private XMLStreamReader parser;
+
+    private XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
+
+    private XMLEventFactory eventFactory = XMLEventFactory.newInstance();
+
+    private XMLEventWriter writer;
+
+    private User user;
 
     public ClientIM(InetAddress address, int port) {
         this.address = address;
@@ -32,19 +44,81 @@ public class ClientIM implements Client {
     public boolean connect() {
         try {
             server = new Socket(address, port);
-            serverInput = new BufferedReader(new InputStreamReader(server.getInputStream()));
-            serverOutput = new PrintWriter(server.getOutputStream());
+
+            serverInput = server.getInputStream();
+            serverOutput = server.getOutputStream();
+
+            inputFactory = XMLInputFactory.newInstance();
+            parser = inputFactory.createXMLStreamReader(serverInput);
+        } catch (XMLStreamException e) {
+            e.printStackTrace();
         } catch (IOException e) {
             return false;
         }
-        System.out.println("Connected");
 
+        System.out.println("Connected");
+        listenServer();
         return true;
     }
 
     @Override
     public void listenServer() {
+        try {
+            while (parser.hasNext()){
+                int event = parser.next();
+                if (event == XMLStreamConstants.START_ELEMENT){
+                    switch (parser.getLocalName()){
+                        case "user":
+                            user = listenUserData();
+                            System.out.println(user);
+                            break;
+                        case "authentication":
+                            break;
+                    }
+                }
+            }
+        } catch (XMLStreamException e) {
+            e.printStackTrace();
+        }
+    }
 
+    private User listenUserData() throws XMLStreamException {
+        String name = null;
+        String id = null;
+        String email = null;
+
+        while (parser.hasNext()){
+            int event = parser.next();
+            if (event == XMLStreamConstants.START_ELEMENT){
+                switch (parser.getLocalName()) {
+                    case "id":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            id = parser.getText();
+                        }
+                        break;
+                    case "name":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            name = parser.getText();
+                        }
+                        break;
+                    case "email":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            email = parser.getText();
+                        }
+                        break;
+                }
+            }
+            if (event == XMLStreamConstants.END_ELEMENT){
+                if (parser.getLocalName().equals("user")){
+                    break;
+                }
+            }
+        }
+
+        return new UserIM(Integer.parseInt(id), name, email);
     }
 
     private String  listenCommand(){
@@ -53,7 +127,8 @@ public class ClientIM implements Client {
 
     @Override
     public int authenticate(AuthenticationData authenticationData) {
-        return -1;
+
+        return 1;
     }
 
     @Override
@@ -63,14 +138,16 @@ public class ClientIM implements Client {
 
     @Override
     public boolean sendMessage(Message message) {
-        serverOutput.println(message.getAutorId() + ": " +message.getText());
-        serverOutput.flush();
-        System.out.println(message.getAutorId() + ": " +message.getText());
+
         return true;
     }
 
     @Override
     public boolean createDialog(List<User> userList) {
         return false;
+    }
+
+    private User getUser(){
+        return user;
     }
 }

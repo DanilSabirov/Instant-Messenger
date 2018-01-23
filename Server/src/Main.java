@@ -1,5 +1,6 @@
 import database.Database;
 import database.XMLDatabase;
+import database.user.UserIM;
 
 import java.io.IOException;
 import java.util.logging.LogManager;

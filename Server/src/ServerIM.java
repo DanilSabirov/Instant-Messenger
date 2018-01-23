@@ -33,7 +33,6 @@ public class ServerIM implements Server {
             try {
                 Socket client = serverSocket.accept();
                 executor.submit(new Listener(client, this));
-                log.info("New connection");
             } catch (IOException e) {
                 log.log(Level.SEVERE, "Exception: ", e);
                 return;
