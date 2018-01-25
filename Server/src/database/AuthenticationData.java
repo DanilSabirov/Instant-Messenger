@@ -3,9 +3,9 @@ package database;
 import java.util.Arrays;
 
 public class AuthenticationData {
-    String login;
+    private String login;
 
-    char[] password;
+    private char[] password;
 
     public AuthenticationData(String login, char[] password) {
         this.login = login;
@@ -14,6 +14,14 @@ public class AuthenticationData {
 
     public void setPassword(char[] password) {
         this.password = password;
+    }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public char[] getPassword() {
+        return password;
     }
 
     @Override

@@ -3,6 +3,7 @@ package client;
 import client.message.Message;
 import client.user.User;
 import client.user.UserIM;
+import javafx.application.Platform;
 
 import javax.xml.stream.*;
 import java.io.IOException;
@@ -73,7 +74,18 @@ public class ClientIM implements Client {
                             System.out.println(user);
                             break;
                         case "authentication":
+                            Platform.runLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Main.setAuthorizationScene();
+                                }
+                            });
                             break;
+                    }
+                }
+                else if (event == XMLStreamConstants.END_ELEMENT){
+                    if (parser.getLocalName().equals("connection")){
+                        //connection closed
                     }
                 }
             }
@@ -111,7 +123,7 @@ public class ClientIM implements Client {
                         break;
                 }
             }
-            if (event == XMLStreamConstants.END_ELEMENT){
+            else if (event == XMLStreamConstants.END_ELEMENT){
                 if (parser.getLocalName().equals("user")){
                     break;
                 }
@@ -128,12 +140,12 @@ public class ClientIM implements Client {
     @Override
     public int authenticate(AuthenticationData authenticationData) {
 
-        return 1;
+        return -1;
     }
 
     @Override
     public boolean register(User user, AuthenticationData authenticationData) {
-        return false;
+
     }
 
     @Override

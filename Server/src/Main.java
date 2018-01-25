@@ -1,3 +1,4 @@
+import database.AuthenticationData;
 import database.Database;
 import database.XMLDatabase;
 import database.user.UserIM;
@@ -10,6 +11,13 @@ public class Main {
         initLog();
 
         Database database = new XMLDatabase("/tmp");
+        database.init();
+      //  database.addUser(new UserIM(0, "Balda", "gmail.com"), new AuthenticationData("Balda", "123456".toCharArray()));
+        try {
+            database.saveAll();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         try {
             Server server = new ServerIM(database, 4444);
             server.start();

@@ -34,6 +34,6 @@ public class AuthorizationController {
     }
 
     public void register(){
-
+        Main.setRegistrationScene();
     }
 }

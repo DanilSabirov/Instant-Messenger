@@ -1,16 +1,14 @@
 import database.AuthenticationData;
 import database.user.User;
-import database.user.UserIM;
 
-import javax.xml.stream.XMLEventFactory;
-import javax.xml.stream.XMLEventWriter;
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.*;
 import javax.xml.stream.events.Characters;
 import javax.xml.stream.events.EndElement;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,11 +20,15 @@ public class Listener implements Runnable {
 
     private Server server;
 
-    private InputStream clientInput = null;
+    private InputStream clientInput;
 
-    private OutputStream clientOutput = null;
+    private OutputStream clientOutput;
 
-    private XMLOutputFactory factory = XMLOutputFactory.newInstance();
+    private XMLInputFactory inputFactory;
+
+    private XMLStreamReader parser;
+
+    private XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
 
     private XMLEventFactory eventFactory = XMLEventFactory.newInstance();
 
@@ -43,9 +45,24 @@ public class Listener implements Runnable {
         try {
             clientInput = client.getInputStream();
             clientOutput = client.getOutputStream();
-            writer = factory.createXMLEventWriter(clientOutput);
+            writer = outputFactory.createXMLEventWriter(clientOutput);
+          //  writer = outputFactory.createXMLEventWriter(System.out);
 
-            sendUser(new UserIM(1, "Bob", "gmail.com"));
+            XMLEvent end = eventFactory.createDTD("\n");
+            XMLEvent event = eventFactory.createStartElement("", null, "connection");
+            writer.add(event);
+            writer.add(end);
+            writer.flush();
+
+            sendAuthenticationRequest(1);
+            listen();
+
+            event = eventFactory.createEndElement("", null, "connection");
+            writer.add(event);
+            writer.add(end);
+
+            writer.flush();
+
         } catch (XMLStreamException e) {
             log.log(Level.SEVERE, "Exception: ", e);
             return;
@@ -56,37 +73,84 @@ public class Listener implements Runnable {
     }
 
     private void listen() throws IOException {
-        String line = "1";
-        while (line != null){
+        try {
+            while (parser.hasNext()){
+                int event = parser.next();
+                if (event == XMLStreamConstants.START_ELEMENT){
+                    switch (parser.getLocalName()){
+                        case "authenticationData":
+                            AuthenticationData authenticationData = listenAuthenticationData();
 
-            System.out.println(line);
+                            break;
+                    }
+                }
+                else if (event == XMLStreamConstants.END_ELEMENT){
+                    if (parser.getLocalName().equals("connection")){
+                        //connection closed
+                    }
+                }
+            }
+        } catch (XMLStreamException e) {
+            e.printStackTrace();
         }
     }
 
-    private void sendAuthenticationRequest() throws XMLStreamException {
+    private AuthenticationData listenAuthenticationData() throws XMLStreamException {
+        String login = null;
+        char[] password = null;
+
+        while (parser.hasNext()){
+            int event = parser.next();
+            if (event == XMLStreamConstants.START_ELEMENT){
+                switch (parser.getLocalName()) {
+                    case "login":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            login = parser.getText();
+                        }
+                        break;
+                    case "password":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            password = parser.getText().toCharArray();
+                        }
+                        break;
+                }
+            }
+            else if (event == XMLStreamConstants.END_ELEMENT){
+                if (parser.getLocalName().equals("authenticationData")){
+                    break;
+                }
+            }
+        }
+
+        return new AuthenticationData(login, password);
+    }
+
+    private void sendAuthenticationRequest(int deep) throws XMLStreamException {
         XMLEvent end = eventFactory.createDTD("\n");
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
         XMLEvent event;
 
-        event = eventFactory.createStartElement("", null, "authentication");
-        writer.add(event);
-        writer.add(end);
-        event = eventFactory.createEndElement("", null, "authentication");
-        writer.add(event);
-        writer.add(end);
+        writer.add(tab);
+        createNode("authentication", "", deep-1);
 
         writer.flush();
     }
 
-    private void sendUser(User user) throws XMLStreamException {
+    private void sendUser(User user, int deep) throws XMLStreamException {
         XMLEvent end = eventFactory.createDTD("\n");
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
         XMLEvent event;
 
+        writer.add(tab);
         event = eventFactory.createStartElement("", null, "user");
         writer.add(event);
         writer.add(end);
-        createNode("id", Integer.toString(user.getId()));
-        createNode("name", user.getName());
-        createNode("email", user.getEmail());
+        createNode("id", Integer.toString(user.getId()), deep+1);
+        createNode("name", user.getName(), deep+1);
+        createNode("email", user.getEmail(), deep+1);
+        writer.add(tab);
         event = eventFactory.createEndElement("", null, "user");
         writer.add(event);
         writer.add(end);
@@ -94,9 +158,9 @@ public class Listener implements Runnable {
         writer.flush();
     }
 
-    private void createNode(String name, String value) throws XMLStreamException {
+    private void createNode(String name, String value, int deep) throws XMLStreamException {
         XMLEvent end = eventFactory.createDTD("\n");
-        XMLEvent tab = eventFactory.createDTD("\t");
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
 
         StartElement sElement = eventFactory.createStartElement("", "", name);
         writer.add(tab);
@@ -108,5 +172,13 @@ public class Listener implements Runnable {
         EndElement eElement = eventFactory.createEndElement("", "", name);
         writer.add(eElement);
         writer.add(end);
+    }
+
+    private static String lPad(int deep){
+        StringBuffer s = new StringBuffer();
+        for(int i = 0; i < deep; i++){
+            s.append('\t');
+        }
+        return s.toString();
     }
 }

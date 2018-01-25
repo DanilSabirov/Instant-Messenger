@@ -56,6 +56,7 @@ public class AuthorizationWindow {
 
     @FXML
     private void register(ActionEvent actionEvent){
-
+        controller.register();
     }
+
 }

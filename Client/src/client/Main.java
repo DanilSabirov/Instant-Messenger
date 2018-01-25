@@ -2,6 +2,7 @@ package client;
 
 import client.gui.AuthorizationController;
 import client.gui.MainController;
+import client.gui.RegistrationController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -45,6 +46,16 @@ public class Main extends Application{
         AuthorizationController authorization = new AuthorizationController(client);
         try {
             setScene("Login", authorization.getLoader());
+        } catch (IOException e) {
+            e.printStackTrace();
+            Runtime.getRuntime().exit(-1);
+        }
+    }
+
+    public static void setRegistrationScene() {
+        RegistrationController registration = new RegistrationController(client);
+        try {
+            setScene("Registration", registration.getLoader());
         } catch (IOException e) {
             e.printStackTrace();
             Runtime.getRuntime().exit(-1);
