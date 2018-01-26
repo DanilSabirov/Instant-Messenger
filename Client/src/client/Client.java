@@ -11,7 +11,7 @@ public interface Client {
 
     void listenServer() throws XMLStreamException;
 
-    int authenticate(AuthenticationData authenticationData);
+    void authenticate(AuthenticationData authenticationData) throws XMLStreamException;
 
     boolean register(User user, AuthenticationData authenticationData);
 

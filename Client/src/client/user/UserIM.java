@@ -8,6 +8,7 @@ public class UserIM implements User {
     private String email;
 
     public UserIM(int id, String name, String email) {
+        this.id = id;
         this.name = name;
         this.email = email;
     }

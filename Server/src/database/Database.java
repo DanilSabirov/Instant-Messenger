@@ -17,6 +17,8 @@ public interface Database {
 
     User getUser(String name);
 
+    User getUser(int id);
+
     boolean addDialog(Dialog dialog);
 
     boolean removeDialog(int id);
@@ -26,6 +28,8 @@ public interface Database {
     Dialog getDialog(int id);
 
     int searchAuthenticationData(AuthenticationData authenticationData);
+
+    int getSequenceUserId();
 
     void saveAll() throws IOException;
 }

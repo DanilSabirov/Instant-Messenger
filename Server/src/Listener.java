@@ -1,5 +1,7 @@
 import database.AuthenticationData;
+import database.Database;
 import database.user.User;
+import database.user.UserIM;
 
 import javax.xml.stream.*;
 import javax.xml.stream.events.Characters;
@@ -28,9 +30,9 @@ public class Listener implements Runnable {
 
     private XMLStreamReader parser;
 
-    private XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
+    private XMLOutputFactory outputFactory;
 
-    private XMLEventFactory eventFactory = XMLEventFactory.newInstance();
+    private XMLEventFactory eventFactory;
 
     private XMLEventWriter writer;
 
@@ -45,6 +47,11 @@ public class Listener implements Runnable {
         try {
             clientInput = client.getInputStream();
             clientOutput = client.getOutputStream();
+
+            outputFactory = XMLOutputFactory.newInstance();
+            eventFactory = XMLEventFactory.newFactory();
+            inputFactory = XMLInputFactory.newInstance();
+
             writer = outputFactory.createXMLEventWriter(clientOutput);
           //  writer = outputFactory.createXMLEventWriter(System.out);
 
@@ -54,6 +61,7 @@ public class Listener implements Runnable {
             writer.add(end);
             writer.flush();
 
+            parser = inputFactory.createXMLStreamReader(clientInput);
             sendAuthenticationRequest(1);
             listen();
 
@@ -79,8 +87,14 @@ public class Listener implements Runnable {
                 if (event == XMLStreamConstants.START_ELEMENT){
                     switch (parser.getLocalName()){
                         case "authenticationData":
-                            AuthenticationData authenticationData = listenAuthenticationData();
-
+                            log.info("Authentication");
+                            sendAuthenticationResponse(server.authenticate(listenAuthenticationData()));
+                            break;
+                        case "registration":
+                            log.info("Registration");
+                            AuthenticationData data = listenAuthenticationData();
+                            User user = listenUserData();
+                            server.register(user, data);
                             break;
                     }
                 }
@@ -127,6 +141,38 @@ public class Listener implements Runnable {
         return new AuthenticationData(login, password);
     }
 
+    private User listenUserData() throws XMLStreamException {
+        String name = null;
+        String email = null;
+
+        while (parser.hasNext()){
+            int event = parser.next();
+            if (event == XMLStreamConstants.START_ELEMENT){
+                switch (parser.getLocalName()) {
+                    case "name":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            name = parser.getText();
+                        }
+                        break;
+                    case "email":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            email = parser.getText();
+                        }
+                        break;
+                }
+            }
+            else if (event == XMLStreamConstants.END_ELEMENT){
+                if (parser.getLocalName().equals("user")){
+                    break;
+                }
+            }
+        }
+
+        return new UserIM(-1, name, email);
+    }
+
     private void sendAuthenticationRequest(int deep) throws XMLStreamException {
         XMLEvent end = eventFactory.createDTD("\n");
         XMLEvent tab = eventFactory.createDTD(lPad(deep));
@@ -135,6 +181,36 @@ public class Listener implements Runnable {
         writer.add(tab);
         createNode("authentication", "", deep-1);
 
+        writer.flush();
+    }
+
+    private void sendAuthenticationResponse(User response) throws XMLStreamException {
+        int deep = 1;
+        XMLEvent end = eventFactory.createDTD("\n");
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
+        XMLEvent event;
+
+        event = eventFactory.createStartElement("", null, "authenticationResponse");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+        if (response.getId() != -1){
+            log.info("Sending user: " + response.toString());
+            sendUser(response, deep+1);
+        }
+        else {
+            createNode("error", "incorrect", deep+1);
+        }
+        event = eventFactory.createEndElement("", null, "authenticationResponse");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+
+        writer.flush();
+    }
+
+    private void sendRegistrationResponse(String response) throws XMLStreamException {
+        createNode("registrationResponse", response, 1);
         writer.flush();
     }
 

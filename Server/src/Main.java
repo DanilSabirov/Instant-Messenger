@@ -1,7 +1,5 @@
-import database.AuthenticationData;
 import database.Database;
 import database.XMLDatabase;
-import database.user.UserIM;
 
 import java.io.IOException;
 import java.util.logging.LogManager;
@@ -21,6 +19,12 @@ public class Main {
         try {
             Server server = new ServerIM(database, 4444);
             server.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            database.saveAll();
         } catch (IOException e) {
             e.printStackTrace();
         }

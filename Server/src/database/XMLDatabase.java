@@ -3,9 +3,8 @@ package database;
 import database.dialog.Dialog;
 import database.loader.LoaderXML;
 import database.user.User;
-import org.w3c.dom.DOMImplementation;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import database.user.UserIM;
+import org.w3c.dom.*;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
@@ -44,6 +43,8 @@ public class XMLDatabase implements Database {
     public XMLDatabase(String pathToRoot) {
         this.pathToRoot = Paths.get(pathToRoot);
     }
+
+    int sequenceUserId = 1;
 
     @Override
     public void init() {
@@ -85,7 +86,7 @@ public class XMLDatabase implements Database {
         userElement.appendChild(nameElement);
         userElement.appendChild(emailElement);
 
-        Element authenticationElement = authenticationDataDoc.createElement("authenticationData");
+        Element authenticationElement = authenticationDataDoc.createElement("data");
 
         Element loginElement = authenticationDataDoc.createElement("login");
         loginElement.appendChild(authenticationDataDoc.createTextNode(authenticationData.getLogin()));
@@ -120,6 +121,11 @@ public class XMLDatabase implements Database {
     }
 
     @Override
+    public User getUser(int id) {
+        return searchUser(id);
+    }
+
+    @Override
     public boolean addDialog(Dialog dialog) {
         return false;
     }
@@ -141,7 +147,74 @@ public class XMLDatabase implements Database {
 
     @Override
     public int searchAuthenticationData(AuthenticationData authenticationData) {
-        return 0;
+        log.info("Search: " + authenticationData.getLogin());
+        NodeList listData = authenticationDataDoc.getChildNodes().item(0).getChildNodes();
+        for (int i = 0; i < listData.getLength(); i++){
+            if (listData.item(i).getNodeName().equals("data")) {
+                NodeList values = listData.item(i).getChildNodes();
+                String login = null;
+                char[] password = null;
+                int id = -1;
+                for(int j = 0; j < values.getLength(); j++){
+                    Node value = values.item(j);
+                    if (value.getNodeName().equals("login")){
+                        login = value.getTextContent();
+                    }
+                    else if(value.getNodeName().equals("password")){
+                        password = value.getTextContent().toCharArray();
+                    }
+                    else if(value.getNodeName().equals("id")){
+                        id = Integer.parseInt(value.getTextContent());
+                    }
+                }
+
+                AuthenticationData data = new AuthenticationData(login, password);
+                if (authenticationData.equals(data)){
+                    log.info("Found: " + id);
+                    return id;
+                }
+            }
+        }
+        log.info("Not found!");
+        return -1;
+    }
+
+    @Override
+    public int getSequenceUserId() {
+        return sequenceUserId;
+    }
+
+    public User searchUser(int userId) {
+        log.info("Search: " + userId);
+        NodeList listData = usersDoc.getChildNodes().item(0).getChildNodes();
+        for (int i = 0; i < listData.getLength(); i++){
+            if (listData.item(i).getNodeName().equals("user")) {
+                NodeList values = listData.item(i).getChildNodes();
+                String name = null;
+                int id = -1;
+                String email = null;
+                for(int j = 0; j < values.getLength(); j++){
+                    Node value = values.item(j);
+                    if (value.getNodeName().equals("name")){
+                        name = value.getTextContent();
+                    }
+                    else if(value.getNodeName().equals("email")){
+                        email = value.getTextContent();
+                    }
+                    else if(value.getNodeName().equals("id")){
+                        id = Integer.parseInt(value.getTextContent());
+                    }
+                }
+
+                if (userId == id){
+                    log.info("Found: " + id);
+                    return new UserIM(id, name, email);
+                }
+            }
+        }
+        log.info("Not found!");
+        return new UserIM(-1, null, null
+        );
     }
 
     public void save(Document document, File file) throws IOException {

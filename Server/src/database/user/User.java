@@ -1,7 +1,5 @@
 package database.user;
 
-import database.AuthenticationData;
-
 public interface User {
     int getId();
 
@@ -10,4 +8,6 @@ public interface User {
     String getEmail();
 
     void setEmail(String  email);
+
+    void setId(int id);
 }

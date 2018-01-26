@@ -2,6 +2,7 @@ import database.AuthenticationData;
 import database.Database;
 import database.dialog.Dialog;
 import database.user.User;
+import database.user.UserIM;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -42,22 +43,28 @@ public class ServerIM implements Server {
     }
 
     @Override
-    public Dialog getDialog(int idDialog) {
+    public synchronized Dialog getDialog(int idDialog) {
         return database.getDialog(idDialog);
     }
 
     @Override
-    public int authenticate(AuthenticationData authenticationData) {
+    public synchronized User authenticate(AuthenticationData authenticationData) {
         int res = database.searchAuthenticationData(authenticationData);
         if (res != -1){
-            return res;
+            return database.getUser(res);
         }
-        return -1;
+        return new UserIM(-1, null, null);
     }
 
     @Override
-    public boolean register(User user, AuthenticationData authenticationData) {
+    public synchronized boolean register(User user, AuthenticationData authenticationData) {
+        user.setId(database.getSequenceUserId());
         if (database.addUser(user, authenticationData)){
+            try {
+                database.saveAll();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
         }
         return false;

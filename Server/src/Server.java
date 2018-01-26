@@ -5,7 +5,7 @@ import database.user.User;
 public interface Server {
     Dialog getDialog(int idDialog);
 
-    int authenticate(AuthenticationData authenticationData);
+    User authenticate(AuthenticationData authenticationData);
 
     boolean register(User user, AuthenticationData authenticationData);
 

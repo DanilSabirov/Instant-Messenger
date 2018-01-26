@@ -8,6 +8,7 @@ public class UserIM implements User {
     private String email;
 
     public UserIM(int id, String name, String email) {
+        this.id = id;
         this.name = name;
         this.email = email;
     }
@@ -30,6 +31,10 @@ public class UserIM implements User {
     @Override
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     @Override
