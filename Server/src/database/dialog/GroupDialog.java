@@ -3,26 +3,50 @@ package database.dialog;
 import database.message.Message;
 import database.user.User;
 
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class GroupDialog implements Dialog {
     private int id;
 
     private List<Message> messages;
 
-    private List<User> users;
+    private Set<Integer> users;
 
-    public GroupDialog(int id, List<User> users) {
+    public GroupDialog() {
+        messages = new ArrayList<>();
+        users = new TreeSet<>();
+    }
+
+    public GroupDialog(int id, Set<Integer> usersId) {
         this.id = id;
-        this.users = users;
+        this.users = usersId;
+        messages = new ArrayList<>();
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    @Override
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    public Set<Integer> getUsersId() {
+        return users;
     }
 
     @Override
     public void addMessage(Message message) {
         messages.add(message);
+    }
+
+    @Override
+    public void addUser(int userId) {
+        users.add(userId);
     }
 
     @Override
@@ -45,5 +69,14 @@ public class GroupDialog implements Dialog {
         }
         Collections.reverse(res);
         return res;
+    }
+
+    @Override
+    public String toString() {
+        return "GroupDialog{" +
+                "id=" + id +
+                ", messages=" + messages +
+                ", users=" + users +
+                '}';
     }
 }

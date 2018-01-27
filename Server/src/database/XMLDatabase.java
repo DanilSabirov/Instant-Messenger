@@ -1,7 +1,10 @@
 package database;
 
 import database.dialog.Dialog;
+import database.dialog.GroupDialog;
 import database.loader.LoaderXML;
+import database.message.Message;
+import database.message.UserMessage;
 import database.user.User;
 import database.user.UserIM;
 import org.w3c.dom.*;
@@ -18,6 +21,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.util.Date;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,12 +45,15 @@ public class XMLDatabase implements Database {
 
     private Document authenticationDataDoc;
 
+    private TreeMap<Integer, Document> dialogDocs;
+
     private File usersXML;
 
     private File authenticationDataXML;
 
     public XMLDatabase(String pathToRoot) {
         this.pathToRoot = Paths.get(pathToRoot);
+        dialogDocs = new TreeMap<>();
     }
 
     int sequenceUserId = 1;
@@ -126,8 +138,66 @@ public class XMLDatabase implements Database {
     }
 
     @Override
-    public boolean addDialog(Dialog dialog) {
-        return false;
+    public void createDialog(Dialog dialog) throws IOException, SAXException {
+        Document dialogDoc = getDialogDoc(dialog.getId());
+
+        initDialogDoc(dialog.getId(), dialogDoc);
+
+        for (Integer userId: dialog.getUsersId()) {
+            addNewUserToDialogDoc(dialogDoc, userId);
+        }
+    }
+
+    @Override
+    public void addNewUserToDialog(int dialogId, int userId) throws IOException, SAXException {
+        if (!dialogDocs.containsKey(dialogId)) {
+            dialogDocs.put(dialogId, getDialogDoc(dialogId));
+        }
+
+        Document dialogDoc = dialogDocs.get(dialogId);
+
+        addNewUserToDialogDoc(dialogDoc, userId);
+    }
+
+    private void addNewUserToDialogDoc(Document dialogDoc, int userId) {
+        NodeList nodeList = dialogDoc.getDocumentElement().getChildNodes();
+
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (node.getNodeName().equals("users")){
+                Element newUserId = dialogDoc.createElement("userId");
+                newUserId.appendChild(dialogDoc.createTextNode(Integer.toString(userId)));
+
+                node.appendChild(newUserId);
+                break;
+            }
+        }
+    }
+
+    @Override
+    public void addMessage(Message message, int dialogId) throws IOException, SAXException {
+        if (!dialogDocs.containsKey(dialogId)) {
+            dialogDocs.put(dialogId, getDialogDoc(dialogId));
+        }
+
+        Document dialogDoc = dialogDocs.get(dialogId);
+
+        Element messageElement = dialogDoc.createElement("message");
+
+        Element authorIdElement = dialogDoc.createElement("authorId");
+        authorIdElement.appendChild(dialogDoc.createTextNode(Integer.toString(message.getAutorId())));
+
+        Element textElement = dialogDoc.createElement("text");
+        textElement.appendChild(dialogDoc.createTextNode(message.getText()));
+
+        Element timeElement = dialogDoc.createElement("text");
+        timeElement.appendChild(dialogDoc.createTextNode(message.getDateReceipt().toString()));
+
+        messageElement.appendChild(authorIdElement);
+        messageElement.appendChild(textElement);
+        messageElement.appendChild(timeElement);
+
+        dialogDoc.getDocumentElement().appendChild(messageElement);
     }
 
     @Override
@@ -141,15 +211,90 @@ public class XMLDatabase implements Database {
     }
 
     @Override
-    public Dialog getDialog(int id) {
-        return null;
+    public Dialog getDialog(int id) throws IOException, SAXException {
+        return parseDialog(getDialogDoc(id));
+    }
+
+    private Document getDialogDoc(int id) throws IOException, SAXException {
+        Document dialogDoc;
+        if (dialogDocs.containsKey(id)){
+            dialogDoc = dialogDocs.get(id);
+        }
+        else{
+            File file = new File(Integer.toString(id) + ".xml");
+            dialogDoc = loaderXML.load(pathToRoot, file, "dialog");
+            dialogDocs.put(id, dialogDoc);
+        }
+        return dialogDoc;
+    }
+
+    private Dialog parseDialog(Document dialogDoc) {
+        NodeList messageList = dialogDoc.getChildNodes().item(0).getChildNodes();
+        GroupDialog dialog = new GroupDialog();
+
+        for (int i = 0; i < messageList.getLength(); i++) {
+            Node message = messageList.item(i);
+            switch (message.getNodeName()) {
+                case "id" :
+                    dialog.setId(Integer.parseInt(message.getTextContent()));
+                    break;
+                case "usersId" :
+                    NodeList usersId = message.getChildNodes();
+                    for (int j = 0; j < usersId.getLength(); j++) {
+                        Node value = usersId.item(j);
+                        switch (value.getNodeName()) {
+                            case "userId" :
+                                for (int k = 0; k < usersId.getLength(); k++) {
+                                    dialog.addUser(Integer.parseInt(value.getTextContent()));
+                                }
+                                break;
+                        }
+                    }
+                    break;
+                case "message" :
+                    int authorId = -1;
+                    String text = null;
+                    ZonedDateTime time = null;
+
+                    NodeList messageInfo = message.getChildNodes();
+                    for (int j = 0; j < messageInfo.getLength(); j++) {
+                        Node value = messageInfo.item(j);
+                        switch (value.getNodeName()) {
+                            case "authorId":
+                                authorId = Integer.parseInt(value.getTextContent());
+                                break;
+                            case "text":
+                                text = value.getTextContent();
+                                break;
+                            case "time" :
+                                time = ZonedDateTime.parse(value.getTextContent());
+                                break;
+                        }
+                    }
+
+                    dialog.addMessage(new UserMessage(authorId, text, time));
+                    break;
+            }
+        }
+
+        return dialog;
+    }
+
+    private void initDialogDoc(int id, Document dialog) {
+        Element idElement = dialog.createElement("id");
+        idElement.appendChild(dialog.createTextNode(Integer.toString(id)));
+
+        Element usersElement = dialog.createElement("users");
+
+        dialog.getDocumentElement().appendChild(idElement);
+        dialog.getDocumentElement().appendChild(usersElement);
     }
 
     @Override
     public int searchAuthenticationData(AuthenticationData authenticationData) {
         log.info("Search: " + authenticationData.getLogin());
         NodeList listData = authenticationDataDoc.getChildNodes().item(0).getChildNodes();
-        for (int i = 0; i < listData.getLength(); i++){
+        for (int i = 0; i < listData.getLength(); i++) {
             if (listData.item(i).getNodeName().equals("data")) {
                 NodeList values = listData.item(i).getChildNodes();
                 String login = null;
@@ -184,7 +329,7 @@ public class XMLDatabase implements Database {
         return sequenceUserId;
     }
 
-    public User searchUser(int userId) {
+    private User searchUser(int userId) {
         log.info("Search: " + userId);
         NodeList listData = usersDoc.getChildNodes().item(0).getChildNodes();
         for (int i = 0; i < listData.getLength(); i++){
@@ -217,7 +362,8 @@ public class XMLDatabase implements Database {
         );
     }
 
-    public void save(Document document, File file) throws IOException {
+    private void save(Document document, File file) throws IOException {
+        log.info("Saving: " + file.toString());
         DOMImplementation impl = document.getImplementation();
         DOMImplementationLS implLS = (DOMImplementationLS) impl.getFeature("LS", "3.0");
         LSSerializer ser = implLS.createLSSerializer();
@@ -233,6 +379,9 @@ public class XMLDatabase implements Database {
     public void saveAll() throws IOException {
         save(usersDoc, usersXML);
         save(authenticationDataDoc, authenticationDataXML);
+        for (Map.Entry<Integer, Document> entry: dialogDocs.entrySet()) {
+            save(entry.getValue(), new File(Integer.toString(entry.getKey()) + ".xml"));
+        }
     }
 
 }

@@ -2,10 +2,12 @@ package client.gui.view;
 
 import client.Client;
 import client.gui.MainController;
+import client.user.User;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 
@@ -22,6 +24,15 @@ public class MainWindow {
 
     @FXML
     Button send;
+
+    @FXML
+    Label name;
+
+    @FXML
+    Label id;
+
+    @FXML
+    Label email;
 
     private Client model;
 
@@ -44,6 +55,14 @@ public class MainWindow {
 
     public void clearText(){
         text.clear();
+    }
+
+    private void setUserInfo() {
+        User user = model.getUser();
+        System.out.println(user);
+        name.setText(user.getName());
+        id.setText(Integer.toString(user.getId()));
+        email.setText(user.getEmail());
     }
 
     @FXML

@@ -3,6 +3,7 @@ import database.Database;
 import database.dialog.Dialog;
 import database.user.User;
 import database.user.UserIM;
+import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -44,7 +45,15 @@ public class ServerIM implements Server {
 
     @Override
     public synchronized Dialog getDialog(int idDialog) {
-        return database.getDialog(idDialog);
+        try {
+            return database.getDialog(idDialog);
+        } catch (IOException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        } catch (SAXException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        }
+        Runtime.getRuntime().exit(-1);
+        return null;
     }
 
     @Override

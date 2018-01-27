@@ -18,4 +18,6 @@ public interface Client {
     boolean sendMessage(Message message);
 
     boolean createDialog(List<User> userList);
+
+    User getUser();
 }

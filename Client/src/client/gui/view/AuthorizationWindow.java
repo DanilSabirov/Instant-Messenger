@@ -6,6 +6,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
 public class AuthorizationWindow {
@@ -19,7 +20,7 @@ public class AuthorizationWindow {
     TextField login;
 
     @FXML
-    TextField password;
+    PasswordField password;
 
     private Client model;
 

@@ -11,6 +11,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.logging.LogManager;
 
 public class Main extends Application{
     private static Client client;
@@ -18,6 +19,7 @@ public class Main extends Application{
     private static Stage stage;
 
     public static void main(String[] args) throws UnknownHostException {
+        initLog();
         client = new ClientIM(InetAddress.getLocalHost(), 4444);
         Thread thread = new Thread(new Runnable() {
             @Override
@@ -76,5 +78,13 @@ public class Main extends Application{
         stage.setScene(new Scene(loader.load()));
 
         stage.show();
+    }
+
+    private static void initLog(){
+        try {
+            LogManager.getLogManager().readConfiguration(Main.class.getResourceAsStream("/client/logging.properties"));
+        } catch (Exception e) {
+            System.err.println("Could not setup logger configuration: " + e.toString());
+        }
     }
 }

@@ -94,12 +94,7 @@ public class ClientIM implements Client {
                 if (event == XMLStreamConstants.START_ELEMENT){
                     switch (parser.getLocalName()){
                         case "authentication":
-                            Platform.runLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Main.setAuthorizationScene();
-                                }
-                            });
+                            Platform.runLater(() -> Main.setAuthorizationScene());
                             break;
                         case "authenticationResponse":
                             listenAuthenticationResponse();
@@ -157,7 +152,7 @@ public class ClientIM implements Client {
         return new UserIM(Integer.parseInt(id), name, email);
     }
 
-    public boolean sendRegistrationRequest(User user, AuthenticationData authenticationData) throws XMLStreamException {
+    private boolean sendRegistrationRequest(User user, AuthenticationData authenticationData) throws XMLStreamException {
         XMLEvent end = eventFactory.createDTD("\n");
         int deep = 1;
         XMLEvent tab = eventFactory.createDTD(lPad(deep));
@@ -224,12 +219,7 @@ public class ClientIM implements Client {
                 switch (parser.getLocalName()) {
                     case "user":
                         user = listenUserData();
-                        Platform.runLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                Main.setMainScene();
-                            }
-                        });
+                        Platform.runLater(() -> Main.setMainScene());
                         return true;
                     case "error":
                         return false;
@@ -265,7 +255,7 @@ public class ClientIM implements Client {
         return false;
     }
 
-    private User getUser(){
+    public User getUser(){
         return user;
     }
 
@@ -286,7 +276,7 @@ public class ClientIM implements Client {
     }
 
     private static String lPad(int deep){
-        StringBuffer s = new StringBuffer();
+        StringBuilder s = new StringBuilder();
         for(int i = 0; i < deep; i++){
             s.append('\t');
         }
