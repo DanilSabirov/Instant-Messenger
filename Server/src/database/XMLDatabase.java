@@ -21,10 +21,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
@@ -51,12 +50,12 @@ public class XMLDatabase implements Database {
 
     private File authenticationDataXML;
 
+    private int sequenceUserId = 0;
+
     public XMLDatabase(String pathToRoot) {
         this.pathToRoot = Paths.get(pathToRoot);
         dialogDocs = new TreeMap<>();
     }
-
-    int sequenceUserId = 1;
 
     @Override
     public void init() {
@@ -68,7 +67,7 @@ public class XMLDatabase implements Database {
             usersXML = new File("users.xml");
             authenticationDataXML = new File("authenticationData.xml");
 
-            usersDoc = loaderXML.load(pathToRoot, usersXML, "user");
+            usersDoc = loaderXML.load(pathToRoot, usersXML, "users");
             authenticationDataDoc = loaderXML.load(pathToRoot, authenticationDataXML, "authenticationData");
 
         } catch (ParserConfigurationException e) {
@@ -83,20 +82,20 @@ public class XMLDatabase implements Database {
     @Override
     public boolean addUser(User user, AuthenticationData authenticationData) {
         Element userElement = usersDoc.createElement("user");
+        userElement.setAttribute("id", Integer.toString(user.getId()));
 
         Element nameElement = usersDoc.createElement("name");
         nameElement.appendChild(usersDoc.createTextNode(user.getName()));
 
-        Element idElement = usersDoc.createElement("id");
-        idElement.appendChild(usersDoc.createTextNode(Integer.toString(user.getId())));
-
         Element emailElement = usersDoc.createElement("email");
         emailElement.appendChild(usersDoc.createTextNode(user.getEmail()));
 
+        Element dialogsIdElement = usersDoc.createElement("dialogsId");
+
         usersDoc.getDocumentElement().appendChild(userElement);
-        userElement.appendChild(idElement);
         userElement.appendChild(nameElement);
         userElement.appendChild(emailElement);
+        userElement.appendChild(dialogsIdElement);
 
         Element authenticationElement = authenticationDataDoc.createElement("data");
 
@@ -113,11 +112,6 @@ public class XMLDatabase implements Database {
         authenticationElement.appendChild(loginElement);
         authenticationElement.appendChild(passwordElement);
         authenticationElement.appendChild(idUserElement);
-
-        usersDoc.getDocumentElement().appendChild(userElement);
-        userElement.appendChild(idElement);
-        userElement.appendChild(nameElement);
-        userElement.appendChild(emailElement);
 
         return true;
     }
@@ -140,11 +134,14 @@ public class XMLDatabase implements Database {
     @Override
     public void createDialog(Dialog dialog) throws IOException, SAXException {
         Document dialogDoc = getDialogDoc(dialog.getId());
+        dialogDoc.getDocumentElement().setAttribute("id", Integer.toString(dialog.getId()));
 
-        initDialogDoc(dialog.getId(), dialogDoc);
+        Element usersElement = dialogDoc.createElement("users");
+        dialogDoc.getDocumentElement().appendChild(usersElement);
 
         for (Integer userId: dialog.getUsersId()) {
             addNewUserToDialogDoc(dialogDoc, userId);
+            addNewDialogToUserDoc(dialog.getId(), userId);
         }
     }
 
@@ -157,6 +154,7 @@ public class XMLDatabase implements Database {
         Document dialogDoc = dialogDocs.get(dialogId);
 
         addNewUserToDialogDoc(dialogDoc, userId);
+        addNewDialogToUserDoc(dialogId, userId);
     }
 
     private void addNewUserToDialogDoc(Document dialogDoc, int userId) {
@@ -174,6 +172,26 @@ public class XMLDatabase implements Database {
         }
     }
 
+    private void addNewDialogToUserDoc(int dialogId, int userId) throws IOException, SAXException {
+        NodeList users = usersDoc.getChildNodes().item(0).getChildNodes();
+
+        for (int i = 0; i < users.getLength(); i++) {
+            Node user = users.item(i);
+            if (user.getNodeName().equals("user") && user.getAttributes().getNamedItem("id").getNodeValue().equals(Integer.toString(userId))) {
+                NodeList values = user.getChildNodes();
+                for(int j = 0; j < values.getLength(); j++) {
+                    Node value = values.item(j);
+                    if (value.getNodeName().equals("dialogsId")) {
+                        Element newDialog = usersDoc.createElement("dialogId");
+                        newDialog.appendChild(usersDoc.createTextNode(Integer.toString(dialogId)));
+                        value.appendChild(newDialog);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public void addMessage(Message message, int dialogId) throws IOException, SAXException {
         if (!dialogDocs.containsKey(dialogId)) {
@@ -185,7 +203,7 @@ public class XMLDatabase implements Database {
         Element messageElement = dialogDoc.createElement("message");
 
         Element authorIdElement = dialogDoc.createElement("authorId");
-        authorIdElement.appendChild(dialogDoc.createTextNode(Integer.toString(message.getAutorId())));
+        authorIdElement.appendChild(dialogDoc.createTextNode(Integer.toString(message.getAuthorId())));
 
         Element textElement = dialogDoc.createElement("text");
         textElement.appendChild(dialogDoc.createTextNode(message.getText()));
@@ -232,25 +250,11 @@ public class XMLDatabase implements Database {
         NodeList messageList = dialogDoc.getChildNodes().item(0).getChildNodes();
         GroupDialog dialog = new GroupDialog();
 
+        dialog.setId(Integer.parseInt(dialogDoc.getDocumentElement().getAttribute("id")));
+
         for (int i = 0; i < messageList.getLength(); i++) {
             Node message = messageList.item(i);
             switch (message.getNodeName()) {
-                case "id" :
-                    dialog.setId(Integer.parseInt(message.getTextContent()));
-                    break;
-                case "usersId" :
-                    NodeList usersId = message.getChildNodes();
-                    for (int j = 0; j < usersId.getLength(); j++) {
-                        Node value = usersId.item(j);
-                        switch (value.getNodeName()) {
-                            case "userId" :
-                                for (int k = 0; k < usersId.getLength(); k++) {
-                                    dialog.addUser(Integer.parseInt(value.getTextContent()));
-                                }
-                                break;
-                        }
-                    }
-                    break;
                 case "message" :
                     int authorId = -1;
                     String text = null;
@@ -278,16 +282,6 @@ public class XMLDatabase implements Database {
         }
 
         return dialog;
-    }
-
-    private void initDialogDoc(int id, Document dialog) {
-        Element idElement = dialog.createElement("id");
-        idElement.appendChild(dialog.createTextNode(Integer.toString(id)));
-
-        Element usersElement = dialog.createElement("users");
-
-        dialog.getDocumentElement().appendChild(idElement);
-        dialog.getDocumentElement().appendChild(usersElement);
     }
 
     @Override
@@ -326,6 +320,7 @@ public class XMLDatabase implements Database {
 
     @Override
     public int getSequenceUserId() {
+        sequenceUserId++;
         return sequenceUserId;
     }
 
@@ -335,25 +330,32 @@ public class XMLDatabase implements Database {
         for (int i = 0; i < listData.getLength(); i++){
             if (listData.item(i).getNodeName().equals("user")) {
                 NodeList values = listData.item(i).getChildNodes();
-                String name = null;
-                int id = -1;
-                String email = null;
-                for(int j = 0; j < values.getLength(); j++){
-                    Node value = values.item(j);
-                    if (value.getNodeName().equals("name")){
-                        name = value.getTextContent();
-                    }
-                    else if(value.getNodeName().equals("email")){
-                        email = value.getTextContent();
-                    }
-                    else if(value.getNodeName().equals("id")){
-                        id = Integer.parseInt(value.getTextContent());
-                    }
-                }
 
-                if (userId == id){
+                int id = Integer.parseInt( ((Element) listData.item(i)).getAttribute("id"));
+                if (id == userId) {
+                    String name = null;
+                    String email = null;
+                    List<Integer> dialogsIdSet = new ArrayList<>();
+
+                    for(int j = 0; j < values.getLength(); j++) {
+                        Node value = values.item(j);
+                        if (value.getNodeName().equals("name")) {
+                            name = value.getTextContent();
+                        }
+                        else if (value.getNodeName().equals("email")) {
+                            email = value.getTextContent();
+                        }
+                        else if (value.getNodeName().equals("dialogsId")) {
+                            NodeList dialogsId = value.getChildNodes();
+                            for (int k = 0; k < dialogsId.getLength(); k++) {
+                                Node dialogId = dialogsId.item(k);
+                                dialogsIdSet.add(Integer.parseInt(dialogId.getTextContent()));
+                            }
+                        }
+                    }
+
                     log.info("Found: " + id);
-                    return new UserIM(id, name, email);
+                    return new UserIM(id, name, email, dialogsIdSet);
                 }
             }
         }

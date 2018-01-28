@@ -18,13 +18,10 @@ public class ServerIM implements Server {
 
     private Database database;
 
-    private int port;
-
     private ServerSocket serverSocket;
 
     public ServerIM(Database database, int port) throws IOException {
         this.database = database;
-        this.port = port;
         serverSocket = new ServerSocket(port);
     }
 

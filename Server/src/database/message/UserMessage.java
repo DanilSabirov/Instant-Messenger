@@ -1,26 +1,24 @@
 package database.message;
 
 
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
-import java.util.Date;
 
 public class UserMessage implements Message {
-    private int autorId;
+    private int authorId;
 
     private String text;
 
     private ZonedDateTime dateReceipt;
 
     public UserMessage(int autorId, String text, ZonedDateTime dateReceipt) {
-        this.autorId = autorId;
+        this.authorId = autorId;
         this.text = text;
         this.dateReceipt = dateReceipt;
     }
 
     @Override
-    public int getAutorId() {
-        return autorId;
+    public int getAuthorId() {
+        return authorId;
     }
 
     @Override
@@ -36,7 +34,7 @@ public class UserMessage implements Message {
     @Override
     public String toString() {
         return "UserMessage{" +
-                "autorId=" + autorId +
+                "authorId=" + authorId +
                 ", text='" + text + '\'' +
                 ", dateReceipt=" + dateReceipt +
                 '}';

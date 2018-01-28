@@ -19,5 +19,7 @@ public interface Client {
 
     boolean createDialog(List<User> userList);
 
+    void getDialog(int dialogId);
+
     User getUser();
 }

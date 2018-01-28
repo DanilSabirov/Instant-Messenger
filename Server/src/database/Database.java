@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.IOException;
 
 public interface Database {
-    public void init();
+    void init();
 
     boolean addUser(User user, AuthenticationData authenticationData);
 
@@ -23,7 +23,7 @@ public interface Database {
 
     void createDialog(Dialog dialog) throws IOException, SAXException;
 
-    public void addNewUserToDialog(int dialogId, int userId) throws IOException, SAXException;
+    void addNewUserToDialog(int dialogId, int userId) throws IOException, SAXException;
 
     void addMessage(Message message, int dialogId) throws IOException, SAXException;
 

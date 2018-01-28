@@ -5,7 +5,6 @@ import database.message.UserMessage;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.logging.LogManager;
@@ -17,37 +16,35 @@ public class Main {
         Database database = new XMLDatabase("/tmp");
         database.init();
 
-        try {
-            Set<Integer> list = new TreeSet<>();
-            list.add(1);
-            list.add(2);
-            database.createDialog(new GroupDialog(1, list));
-            database.addNewUserToDialog(1, 123);
-            database.addNewUserToDialog(1, 45);
-            database.addMessage(new UserMessage(1, "Hello World!!!", ZonedDateTime.now()), 1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        }
-        try {
-            database.saveAll();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
 //        try {
-//            Server server = new ServerIM(database, 4444);
-//            server.start();
+//            Set<Integer> list = new TreeSet<>();
+//            list.add(1);
+//            list.add(2);
+//            database.createDialog(new GroupDialog(1, list));
+//            database.addMessage(new UserMessage(1, "Hello World!!!", ZonedDateTime.now()), 1);
 //        } catch (IOException e) {
 //            e.printStackTrace();
+//        } catch (SAXException e) {
+//            e.printStackTrace();
 //        }
-//
 //        try {
 //            database.saveAll();
 //        } catch (IOException e) {
 //            e.printStackTrace();
 //        }
+
+        try {
+            Server server = new ServerIM(database, 4444);
+            server.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            database.saveAll();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void initLog(){

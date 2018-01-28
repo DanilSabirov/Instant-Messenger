@@ -3,21 +3,31 @@ package client.dialog;
 import client.message.Message;
 import client.user.User;
 
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class GroupDialog implements Dialog {
     private int id;
 
     private List<Message> messages;
 
-    private List<User> users;
+    public GroupDialog() {
+        messages = new ArrayList<>();
+    }
 
-    public GroupDialog(int id, List<User> users) {
+    public GroupDialog(int id) {
         this.id = id;
-        this.users = users;
+        messages = new ArrayList<>();
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    @Override
+    public int getId() {
+        return id;
     }
 
     @Override
@@ -45,5 +55,13 @@ public class GroupDialog implements Dialog {
         }
         Collections.reverse(res);
         return res;
+    }
+
+    @Override
+    public String toString() {
+        return "GroupDialog{" +
+                "id=" + id +
+                ", messages=" + messages +
+                '}';
     }
 }

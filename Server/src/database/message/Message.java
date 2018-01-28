@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 
 public interface Message {
-    int getAutorId();
+    int getAuthorId();
 
     String getText();
 

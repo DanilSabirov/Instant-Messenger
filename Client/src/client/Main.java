@@ -67,6 +67,7 @@ public class Main extends Application{
         MainController controller = new MainController(client);
         try {
             setScene("IM", controller.getLoader());
+            controller.setUserInfo();
         } catch (IOException e) {
             e.printStackTrace();
             Runtime.getRuntime().exit(-1);

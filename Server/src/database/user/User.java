@@ -1,5 +1,8 @@
 package database.user;
 
+import java.util.List;
+import java.util.Set;
+
 public interface User {
     int getId();
 
@@ -10,4 +13,6 @@ public interface User {
     void setEmail(String  email);
 
     void setId(int id);
+
+    List<Integer> getDialogs();
 }

@@ -1,5 +1,8 @@
 package client.user;
 
+import java.util.List;
+import java.util.Set;
+
 public interface User {
     int getId();
 
@@ -7,5 +10,9 @@ public interface User {
 
     String getEmail();
 
-    void setEmail(String email);
+    void setEmail(String  email);
+
+    void setId(int id);
+
+    List<Integer> getDialogs();
 }

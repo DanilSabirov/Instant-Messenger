@@ -15,14 +15,28 @@ public class MainController {
         window = new MainWindow(model, this);
     }
 
-    public FXMLLoader getLoader(){
+    public FXMLLoader getLoader() {
         return window.load();
     }
 
-    public void sendMessage(){
+    public void sendMessage() {
         String text = window.getText();
         if(text.length() != 0){
-            model.sendMessage(new UserMessage(1, text));
+     //       model.sendMessage(new UserMessage(1, text));
         }
+    }
+
+    public void setUserInfo() {
+        window.setUserInfo();
+    }
+
+    public void searchUser() {
+        if (window.getSearchUser().length() > 0) {
+
+        }
+    }
+
+    public void getDialog(int dialogId) {
+        model.getDialog(dialogId);
     }
 }

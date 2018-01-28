@@ -81,21 +81,34 @@ public class Listener implements Runnable {
     }
 
     private void listen() throws IOException {
+        User user = null;
         try {
             while (parser.hasNext()){
                 int event = parser.next();
-                if (event == XMLStreamConstants.START_ELEMENT){
-                    switch (parser.getLocalName()){
+                if (event == XMLStreamConstants.START_ELEMENT) {
+                    switch (parser.getLocalName()) {
                         case "authenticationData":
                             log.info("Authentication");
-                            sendAuthenticationResponse(server.authenticate(listenAuthenticationData()));
+                            user = server.authenticate(listenAuthenticationData());
+                            sendAuthenticationResponse(user);
                             break;
                         case "registration":
                             log.info("Registration");
                             AuthenticationData data = listenAuthenticationData();
-                            User user = listenUserData();
+                            user = listenUserData();
                             server.register(user, data);
                             break;
+                        default:
+                            if (user != null) {
+                                switch (parser.getLocalName()) {
+                                    case "getDialog":
+                                        event = parser.next();
+                                        int idDialog = Integer.parseInt(parser.getText());
+                                        if (user.getDialogs().contains(idDialog)) {
+                                            server.getDialog(idDialog);
+                                        }
+                                }
+                            }
                     }
                 }
                 else if (event == XMLStreamConstants.END_ELEMENT){
@@ -223,9 +236,23 @@ public class Listener implements Runnable {
         event = eventFactory.createStartElement("", null, "user");
         writer.add(event);
         writer.add(end);
+
         createNode("id", Integer.toString(user.getId()), deep+1);
         createNode("name", user.getName(), deep+1);
         createNode("email", user.getEmail(), deep+1);
+
+        event = eventFactory.createStartElement("", null,"dialogsId");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+        for (Integer dialogId: user.getDialogs()) {
+            createNode("dialogId", dialogId.toString(), deep+1);
+        }
+        event = eventFactory.createEndElement("", null, "dialogsId");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+
         writer.add(tab);
         event = eventFactory.createEndElement("", null, "user");
         writer.add(event);

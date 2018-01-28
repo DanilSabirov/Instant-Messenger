@@ -3,13 +3,13 @@ package client.gui.view;
 import client.Client;
 import client.gui.MainController;
 import client.user.User;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.*;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
 
 
 public class MainWindow {
@@ -26,6 +26,12 @@ public class MainWindow {
     Button send;
 
     @FXML
+    Button searchButton;
+
+    @FXML
+    TextField searchField;
+
+    @FXML
     Label name;
 
     @FXML
@@ -37,6 +43,8 @@ public class MainWindow {
     private Client model;
 
     private MainController controller;
+
+    private ObservableList<Integer> dialogsObservableList;
 
     public MainWindow(Client model, MainController controller) {
         this.model = model;
@@ -53,20 +61,36 @@ public class MainWindow {
         return text.getText();
     }
 
+    public String getSearchUser() {
+        return searchField.getText();
+    }
+
     public void clearText(){
         text.clear();
     }
 
-    private void setUserInfo() {
+    public void setUserInfo() {
         User user = model.getUser();
-        System.out.println(user);
+
         name.setText(user.getName());
         id.setText(Integer.toString(user.getId()));
         email.setText(user.getEmail());
+
+        dialogsObservableList = FXCollections.observableList(user.getDialogs());
+        dialogs.setItems((ObservableList) dialogsObservableList);
+        dialogs.getSelectionModel().selectionModeProperty().addListener(new ChangeListener() {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+                controller.getDialog((Integer) newValue);
+            }
+        });
     }
 
     @FXML
     private void sendMessage(ActionEvent actionEvent) {
         controller.sendMessage();
     }
+
+    @FXML
+    private void searchUser() {controller.searchUser();}
 }
