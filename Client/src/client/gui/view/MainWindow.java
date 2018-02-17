@@ -1,6 +1,7 @@
 package client.gui.view;
 
 import client.Client;
+import client.dialog.Dialog;
 import client.gui.MainController;
 import client.user.User;
 import javafx.beans.value.ChangeListener;
@@ -44,11 +45,15 @@ public class MainWindow {
 
     private MainController controller;
 
-    private ObservableList<Integer> dialogsObservableList;
+    private ObservableList<Dialog> dialogsObservableList;
+
+    private ObservableList<User> foundUsersObservableList;
 
     public MainWindow(Client model, MainController controller) {
         this.model = model;
         this.controller = controller;
+        dialogsObservableList = model.getDialogs();
+        foundUsersObservableList = model.getFoundUsers();
     }
 
     public FXMLLoader load(){
@@ -76,14 +81,25 @@ public class MainWindow {
         id.setText(Integer.toString(user.getId()));
         email.setText(user.getEmail());
 
-        dialogsObservableList = FXCollections.observableList(user.getDialogs());
+        dialogs.setItems((ObservableList) foundUsersObservableList);
+        dialogs.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        dialogs.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+                controller.createDialog(((User) newValue).getId());
+            }
+        });
+        /*dialogsObservableList = FXCollections.observableList(user.getDialogs());
         dialogs.setItems((ObservableList) dialogsObservableList);
+        dialogs.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         dialogs.getSelectionModel().selectionModeProperty().addListener(new ChangeListener() {
             @Override
             public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                controller.getDialog((Integer) newValue);
+                System.out.println("createDialog");
+                controller.createDialog((Integer) newValue);
             }
         });
+*/
     }
 
     @FXML
@@ -92,5 +108,7 @@ public class MainWindow {
     }
 
     @FXML
-    private void searchUser() {controller.searchUser();}
+    private void searchUser() {
+        model.searchUser(searchField.getText());
+    }
 }

@@ -1,5 +1,6 @@
 import database.AuthenticationData;
-import database.Database;
+import database.dialog.Dialog;
+import database.message.Message;
 import database.user.User;
 import database.user.UserIM;
 
@@ -12,6 +13,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -65,12 +69,7 @@ public class Listener implements Runnable {
             sendAuthenticationRequest(1);
             listen();
 
-            event = eventFactory.createEndElement("", null, "connection");
-            writer.add(event);
-            writer.add(end);
-
-            writer.flush();
-
+            client.close();
         } catch (XMLStreamException e) {
             log.log(Level.SEVERE, "Exception: ", e);
             return;
@@ -107,13 +106,27 @@ public class Listener implements Runnable {
                                         if (user.getDialogs().contains(idDialog)) {
                                             server.getDialog(idDialog);
                                         }
+                                    case "searchUser":
+                                        event = parser.next();
+                                        String namePrefix = parser.getText();
+                                        sendFoundUsers(server.searchUsers(namePrefix));
+                                    case "createDialog":
+                                        event = parser.next();
+                                        Integer userId = Integer.parseInt(parser.getText());
+
+                                        Set<Integer> usersId = new TreeSet<>();
+                                        usersId.add(user.getId());
+                                        usersId.add(userId);
+                                        int dialogId = server.createDialog(usersId);
+                                        sendDialog(server.getDialog(dialogId));
                                 }
                             }
                     }
                 }
                 else if (event == XMLStreamConstants.END_ELEMENT){
                     if (parser.getLocalName().equals("connection")){
-                        //connection closed
+                        log.info("connection " + Thread.currentThread().getId() + " closed");
+                        break;
                     }
                 }
             }
@@ -227,6 +240,29 @@ public class Listener implements Runnable {
         writer.flush();
     }
 
+    private void sendFoundUsers(List<User> users) throws XMLStreamException {
+        int deep = 1;
+        XMLEvent end = eventFactory.createDTD("\n");
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
+        XMLEvent event;
+
+        event = eventFactory.createStartElement("", null, "foundUsers");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+
+        for (int i = 0; i < users.size(); i++){
+            sendUser(users.get(i), deep+1);
+        }
+
+        event = eventFactory.createEndElement("", null, "foundUsers");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+
+        writer.flush();
+    }
+
     private void sendUser(User user, int deep) throws XMLStreamException {
         XMLEvent end = eventFactory.createDTD("\n");
         XMLEvent tab = eventFactory.createDTD(lPad(deep));
@@ -259,6 +295,52 @@ public class Listener implements Runnable {
         writer.add(end);
 
         writer.flush();
+    }
+
+    private void sendDialog(Dialog dialog) throws XMLStreamException {
+        int deep = 1;
+        XMLEvent end = eventFactory.createDTD("\n");
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
+        XMLEvent event;
+
+        writer.add(tab);
+        event = eventFactory.createStartElement("", null, "dialog");
+        writer.add(event);
+        writer.add(end);
+
+        createNode("dialogId", Integer.toString(dialog.getId()), deep+1);
+        writer.add(end);
+
+        for (Message message: dialog.getMessages()) {
+            sendMessage(message, deep+1);
+        }
+
+        writer.add(tab);
+        event = eventFactory.createEndElement("", null, "dialog");
+        writer.add(event);
+        writer.add(end);
+
+        writer.flush();
+    }
+
+    private void sendMessage(Message message, int deep) throws XMLStreamException {
+        XMLEvent end = eventFactory.createDTD("\n");
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
+        XMLEvent event;
+
+        writer.add(tab);
+        event = eventFactory.createStartElement("", null, "message");
+        writer.add(event);
+        writer.add(end);
+
+        createNode("authorId", Integer.toString(message.getAuthorId()), deep+1);
+        createNode("text", message.getText(), deep);
+        createNode("time", message.getDateReceipt().toString(), deep+1);
+
+        writer.add(tab);
+        event = eventFactory.createEndElement("", null, "message");
+        writer.add(event);
+        writer.add(end);
     }
 
     private void createNode(String name, String value, int deep) throws XMLStreamException {

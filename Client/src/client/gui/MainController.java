@@ -2,7 +2,6 @@ package client.gui;
 
 import client.Client;
 import client.gui.view.MainWindow;
-import client.message.UserMessage;
 import javafx.fxml.FXMLLoader;
 
 public class MainController {
@@ -32,11 +31,12 @@ public class MainController {
 
     public void searchUser() {
         if (window.getSearchUser().length() > 0) {
-
+            model.searchUser(window.getSearchUser());
         }
     }
 
-    public void getDialog(int dialogId) {
-        model.getDialog(dialogId);
+    public void createDialog(int dialogId) {
+        model.createDialog(dialogId);
+
     }
 }

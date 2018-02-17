@@ -52,6 +52,8 @@ public class XMLDatabase implements Database {
 
     private int sequenceUserId = 0;
 
+    private int sequenceDialogId = 0;
+
     public XMLDatabase(String pathToRoot) {
         this.pathToRoot = Paths.get(pathToRoot);
         dialogDocs = new TreeMap<>();
@@ -143,6 +145,7 @@ public class XMLDatabase implements Database {
             addNewUserToDialogDoc(dialogDoc, userId);
             addNewDialogToUserDoc(dialog.getId(), userId);
         }
+        log.info("Created dialog: " + dialog.getId() + dialog.getUsersId());
     }
 
     @Override
@@ -319,9 +322,43 @@ public class XMLDatabase implements Database {
     }
 
     @Override
-    public int getSequenceUserId() {
-        sequenceUserId++;
-        return sequenceUserId;
+    public List<User> searchUsers(String namePrefix) {
+        log.info("Search: " + namePrefix + '*');
+        List<User> users = new ArrayList<>();
+        NodeList listData = usersDoc.getChildNodes().item(0).getChildNodes();
+
+        for (int i = 0; i < listData.getLength(); i++){
+            if (listData.item(i).getNodeName().equals("user")) {
+                NodeList values = listData.item(i).getChildNodes();
+
+                int id = Integer.parseInt( ((Element) listData.item(i)).getAttribute("id"));
+                String name = null;
+                String email = null;
+                List<Integer> dialogsIdSet = new ArrayList<>();
+
+                boolean ok = true;
+                for(int j = 0; j < values.getLength(); j++) {
+                    Node value = values.item(j);
+                    if (value.getNodeName().equals("name")) {
+                        name = value.getTextContent();
+                        if (!name.contains(namePrefix)){
+                            ok = false;
+                            break;
+                        }
+                    }
+                    else if (value.getNodeName().equals("email")) {
+                        email = value.getTextContent();
+                    }
+                }
+
+                if (ok){
+                    log.info("Found: " + id + " " + name);
+                    users.add(new UserIM(id, name, email, dialogsIdSet));
+                }
+            }
+        }
+        if (users.size() == 0) {log.info("Not found!");}
+        return users;
     }
 
     private User searchUser(int userId) {
@@ -354,7 +391,7 @@ public class XMLDatabase implements Database {
                         }
                     }
 
-                    log.info("Found: " + id);
+                    log.info("Found: " + id + " " + name);
                     return new UserIM(id, name, email, dialogsIdSet);
                 }
             }
@@ -384,6 +421,16 @@ public class XMLDatabase implements Database {
         for (Map.Entry<Integer, Document> entry: dialogDocs.entrySet()) {
             save(entry.getValue(), new File(Integer.toString(entry.getKey()) + ".xml"));
         }
+    }
+
+    @Override
+    public int getSequenceUserId() {
+        return sequenceUserId++;
+    }
+
+    @Override
+    public int getSequenceDialogId() {
+        return sequenceDialogId++;
     }
 
 }

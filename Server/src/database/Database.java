@@ -9,6 +9,7 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public interface Database {
     void init();
@@ -35,7 +36,11 @@ public interface Database {
 
     int searchAuthenticationData(AuthenticationData authenticationData);
 
+    List<User> searchUsers(String namePrefix);
+
     int getSequenceUserId();
 
     void saveAll() throws IOException;
+
+    int getSequenceDialogId();
 }

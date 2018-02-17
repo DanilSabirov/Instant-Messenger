@@ -62,11 +62,6 @@ public class UserIM implements User {
 
     @Override
     public String toString() {
-        return "UserIM{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", email='" + email + '\'' +
-                ", dialogsId=" + dialogsId +
-                '}';
+        return id + "\n" + name;
     }
 }

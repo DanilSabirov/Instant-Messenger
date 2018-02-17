@@ -7,6 +7,8 @@ import client.message.UserMessage;
 import client.user.User;
 import client.user.UserIM;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import javax.xml.stream.*;
 import javax.xml.stream.events.Characters;
@@ -48,12 +50,15 @@ public class ClientIM implements Client {
 
     private User user;
 
-    private Map<Integer, Dialog> dialogs;
+    private ObservableList<Dialog> dialogs;
+
+    private ObservableList<User> foundUsers;
 
     public ClientIM(InetAddress address, int port) {
         this.address = address;
         this.port = port;
-        dialogs = new TreeMap<>();
+        dialogs = FXCollections.observableList(new ArrayList<>());
+        foundUsers = FXCollections.observableList(new ArrayList<>());
     }
 
     @Override
@@ -80,9 +85,8 @@ public class ClientIM implements Client {
 
             listenServer();
 
-            event = eventFactory.createEndElement("", null, "connection");
-            writer.add(event);
-            writer.add(end);
+            server.close();
+            log.info("Connection closed");
         } catch (XMLStreamException e) {
             log.log(Level.SEVERE, "Exception: ", e);
         } catch (IOException e) {
@@ -108,18 +112,102 @@ public class ClientIM implements Client {
                             break;
                         case "dialog":
                             Dialog dialog = listenDialog();
-                            dialogs.put(dialog.getId(), dialog);
+                            dialogs.add(dialog);
+                        case "foundUsers":
+                            List<User> userList= listenFoundUsers();
+                            Platform.runLater(() -> foundUsers.addAll(userList));
                     }
                 }
                 else if (event == XMLStreamConstants.END_ELEMENT){
-                    if (parser.getLocalName().equals("connection")){
-                        //connection closed
-                        log.info("Connection closed");
+                    if (parser.getLocalName().equals("connection")) {
+                        break;
                     }
                 }
             }
         } catch (XMLStreamException e) {
             log.log(Level.SEVERE, "Exception: ", e);
+        }
+    }
+
+    @Override
+    public void authenticate(AuthenticationData authenticationData) {
+        try {
+            sendAuthenticateRequest(authenticationData);
+        } catch (XMLStreamException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        }
+    }
+
+    @Override
+    public boolean register(User user, AuthenticationData authenticationData) {
+        try {
+            return sendRegistrationRequest(user, authenticationData);
+        } catch (XMLStreamException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+            return false;
+        }
+    }
+
+    @Override
+    public void searchUser(String namePrefix) {
+        try {
+            foundUsers.clear();
+            sendSearchUserRequest(namePrefix);
+        } catch (XMLStreamException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        }
+    }
+
+    @Override
+    public boolean sendMessage(Message message) {
+
+        return true;
+    }
+
+    @Override
+    public void createDialog(int userId) {
+        try {
+            sendCreateDialogRequest(userId);
+        } catch (XMLStreamException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        }
+    }
+
+    @Override
+    public ObservableList<Dialog> getDialogs() {
+        return dialogs;
+    }
+
+    @Override
+    public User getUser(){
+        return user;
+    }
+
+    @Override
+    public ObservableList<User> getFoundUsers() {
+        return foundUsers;
+    }
+
+    @Override
+    public void closeConnection() {
+        try {
+            XMLEvent event;
+            event = eventFactory.createEndElement("", null,"connection");
+            writer.add(event);
+
+            writer.flush();
+        } catch (XMLStreamException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        }
+    }
+
+    public void getDialog(int dialogId){
+        if (!dialogs.contains(new GroupDialog(dialogId))) {
+            try {
+                sendGetDialogRequest(dialogId);
+            } catch (XMLStreamException e) {
+                log.log(Level.SEVERE, "Exception: ", e);
+            }
         }
     }
 
@@ -129,7 +217,7 @@ public class ClientIM implements Client {
         String email = null;
         List<Integer> dialogsId = new ArrayList<>();
 
-        while (parser.hasNext()){
+        while (parser.hasNext()) {
             int event = parser.next();
             if (event == XMLStreamConstants.START_ELEMENT) {
                 switch (parser.getLocalName()) {
@@ -163,51 +251,29 @@ public class ClientIM implements Client {
             }
         }
 
+        System.out.println(id + " " + name + " " + email);
         return new UserIM(Integer.parseInt(id), name, email, dialogsId);
     }
 
-    private boolean sendRegistrationRequest(User user, AuthenticationData authenticationData) throws XMLStreamException {
-        XMLEvent end = eventFactory.createDTD("\n");
-        int deep = 1;
-        XMLEvent tab = eventFactory.createDTD(lPad(deep));
-        XMLEvent event;
+    private List listenFoundUsers() throws XMLStreamException {
+        List users = new ArrayList();
 
-        event = eventFactory.createStartElement("", null, "registration");
-        writer.add(event);
-        writer.add(end);
+        while (parser.hasNext()) {
+            int event = parser.next();
+            if (event == XMLStreamConstants.START_ELEMENT) {
+                switch (parser.getLocalName()) {
+                    case "user":
+                        users.add(listenUserData());
+                }
+            }
+            else if (event == XMLStreamConstants.END_ELEMENT){
+                if (parser.getLocalName().equals("foundUsers")){
+                    break;
+                }
+            }
+        }
 
-        sendAuthenticateRequest(authenticationData);
-
-        event = eventFactory.createStartElement("", null, "user");
-        writer.add(tab);
-        writer.add(event);
-        writer.add(end);
-        createNode("id", Integer.toString(user.getId()), deep+1);
-        createNode("name", user.getName(), deep+1);
-        createNode("email", user.getEmail(), deep+1);
-        event = eventFactory.createEndElement("", null, "user");
-        writer.add(tab);
-        writer.add(event);
-        writer.add(end);
-
-        event = eventFactory.createEndElement("", null, "registration");
-        writer.add(event);
-        writer.add(end);
-        writer.flush();
-
-        return true;
-    }
-
-    private void sendGetDialogRequest(int dialogId) throws XMLStreamException {
-        createNode("getDialog", Integer.toString(dialogId), 1);
-
-        writer.flush();
-    }
-
-    private void sendCreateDialogRequest(int userId) throws XMLStreamException {
-        createNode("getDialog", Integer.toString(userId), 1);
-
-        writer.flush();
+        return users;
     }
 
     private List<Integer> listenDialogsId() throws XMLStreamException {
@@ -233,34 +299,6 @@ public class ClientIM implements Client {
         }
 
         return idSet;
-    }
-
-    private void sendAuthenticateRequest(AuthenticationData authenticationData) throws XMLStreamException {
-        XMLEvent end = eventFactory.createDTD("\n");
-        int deep = 1;
-        XMLEvent tab = eventFactory.createDTD(lPad(deep));
-        XMLEvent event;
-
-        event = eventFactory.createStartElement("", null, "authenticationData");
-        writer.add(tab);
-        writer.add(event);
-        writer.add(end);
-        createNode("login", authenticationData.getLogin(), deep+1);
-        createNode("password", new String(authenticationData.getPassword()), deep+1);
-        event = eventFactory.createEndElement("", null, "authenticationData");
-        writer.add(tab);
-        writer.add(event);
-        writer.add(end);
-        writer.flush();
-    }
-
-    @Override
-    public void authenticate(AuthenticationData authenticationData) {
-        try {
-            sendAuthenticateRequest(authenticationData);
-        } catch (XMLStreamException e) {
-            log.log(Level.SEVERE, "Exception: ", e);
-        }
     }
 
     private boolean listenAuthenticationResponse() throws XMLStreamException {
@@ -352,41 +390,87 @@ public class ClientIM implements Client {
         return new UserMessage(authorId, text, time);
     }
 
-    @Override
-    public boolean register(User user, AuthenticationData authenticationData) {
-        try {
-            return sendRegistrationRequest(user, authenticationData);
-        } catch (XMLStreamException e) {
-            log.log(Level.SEVERE, "Exception: ", e);
-            return false;
-        }
-    }
+    private boolean sendRegistrationRequest(User user, AuthenticationData authenticationData) throws XMLStreamException {
+        XMLEvent end = eventFactory.createDTD("\n");
+        int deep = 1;
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
+        XMLEvent event;
 
-    @Override
-    public boolean sendMessage(Message message) {
+        event = eventFactory.createStartElement("", null, "registration");
+        writer.add(event);
+        writer.add(end);
+
+        sendAuthenticateRequest(authenticationData);
+
+        event = eventFactory.createStartElement("", null, "user");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+        createNode("id", Integer.toString(user.getId()), deep+1);
+        createNode("name", user.getName(), deep+1);
+        createNode("email", user.getEmail(), deep+1);
+        event = eventFactory.createEndElement("", null, "user");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+
+        event = eventFactory.createEndElement("", null, "registration");
+        writer.add(event);
+        writer.add(end);
+        writer.flush();
 
         return true;
     }
 
-    @Override
-    public boolean createDialog(List<User> userList) {
-        return false;
+    private void sendGetDialogRequest(int dialogId) throws XMLStreamException {
+        XMLEvent end = eventFactory.createDTD("\n");
+        int deep = 1;
+
+        createNode("getDialog", Integer.toString(dialogId), 1);
+        writer.add(end);
+
+        writer.flush();
     }
 
-    @Override
-    public void getDialog(int dialogId) {
-        if (!dialogs.containsKey(dialogId)) {
-            try {
-                sendGetDialogRequest(dialogId);
-            } catch (XMLStreamException e) {
-                log.log(Level.SEVERE, "Exception: ", e);
-            }
-        }
+    private void sendCreateDialogRequest(int userId) throws XMLStreamException {
+        XMLEvent end = eventFactory.createDTD("\n");
+        int deep = 1;
+
+        createNode("createDialog", Integer.toString(userId), 1);
+        writer.add(end);
+
+        writer.flush();
     }
 
-    @Override
-    public User getUser(){
-        return user;
+    private void sendAuthenticateRequest(AuthenticationData authenticationData) throws XMLStreamException {
+        XMLEvent end = eventFactory.createDTD("\n");
+        int deep = 1;
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
+        XMLEvent event;
+
+        event = eventFactory.createStartElement("", null, "authenticationData");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+        createNode("login", authenticationData.getLogin(), deep+1);
+        createNode("password", new String(authenticationData.getPassword()), deep+1);
+        event = eventFactory.createEndElement("", null, "authenticationData");
+        writer.add(tab);
+        writer.add(event);
+        writer.add(end);
+        writer.flush();
+    }
+
+    private void sendSearchUserRequest(String namePrefix) throws XMLStreamException {
+        XMLEvent end = eventFactory.createDTD("\n");
+        int deep = 1;
+        XMLEvent tab = eventFactory.createDTD(lPad(deep));
+        XMLEvent event;
+
+        createNode("searchUser", namePrefix, deep);
+        writer.add(end);
+
+        writer.flush();
     }
 
     private void createNode(String name, String value, int deep) throws XMLStreamException {

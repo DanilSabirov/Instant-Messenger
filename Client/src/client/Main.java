@@ -21,12 +21,9 @@ public class Main extends Application{
     public static void main(String[] args) throws UnknownHostException {
         initLog();
         client = new ClientIM(InetAddress.getLocalHost(), 4444);
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if (!client.connect()) {
-                    Runtime.getRuntime().exit(-1);
-                }
+        Thread thread = new Thread(() -> {
+            if (!client.connect()) {
+                Runtime.getRuntime().exit(-1);
             }
         });
         thread.start();
@@ -40,6 +37,7 @@ public class Main extends Application{
 
     @Override
     public void stop() throws Exception {
+        client.closeConnection();
         Runtime.getRuntime().exit(0);
     }
 

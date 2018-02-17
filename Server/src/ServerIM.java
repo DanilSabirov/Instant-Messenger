@@ -1,6 +1,7 @@
 import database.AuthenticationData;
 import database.Database;
 import database.dialog.Dialog;
+import database.dialog.GroupDialog;
 import database.user.User;
 import database.user.UserIM;
 import org.xml.sax.SAXException;
@@ -8,6 +9,9 @@ import org.xml.sax.SAXException;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -38,6 +42,19 @@ public class ServerIM implements Server {
             }
         }
         return;
+    }
+
+    @Override
+    public int createDialog(Set<Integer> usersId) {
+        int dialogId = database.getSequenceDialogId();
+        try {
+            database.createDialog(new GroupDialog(dialogId, usersId));
+        } catch (IOException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        } catch (SAXException e) {
+            log.log(Level.SEVERE, "Exception: ", e);
+        }
+        return dialogId;
     }
 
     @Override
@@ -74,5 +91,10 @@ public class ServerIM implements Server {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public List<User> searchUsers(String namePrefix) {
+        return database.searchUsers(namePrefix);
     }
 }
