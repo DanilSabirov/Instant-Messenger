@@ -13,25 +13,8 @@ public class Main {
     public static void main(String[] args) {
         initLog();
 
-        Database database = new XMLDatabase("/tmp");
+        Database database = new XMLDatabase(".");
         database.init();
-
-//        try {
-//            Set<Integer> list = new TreeSet<>();
-//            list.add(1);
-//            list.add(2);
-//            database.createDialog(new GroupDialog(1, list));
-//            database.addMessage(new UserMessage(1, "Hello World!!!", ZonedDateTime.now()), 1);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (SAXException e) {
-//            e.printStackTrace();
-//        }
-//        try {
-//            database.saveAll();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
 
         try {
             Server server = new ServerIM(database, 4444);

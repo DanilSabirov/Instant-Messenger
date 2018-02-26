@@ -7,6 +7,7 @@ import database.message.Message;
 import database.message.UserMessage;
 import database.user.User;
 import database.user.UserIM;
+import javafx.scene.Parent;
 import org.w3c.dom.*;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSOutput;
@@ -72,12 +73,26 @@ public class XMLDatabase implements Database {
             usersDoc = loaderXML.load(pathToRoot, usersXML, "users");
             authenticationDataDoc = loaderXML.load(pathToRoot, authenticationDataXML, "authenticationData");
 
+            initSequence();
+
+            saveAll();
         } catch (ParserConfigurationException e) {
             log.log(Level.SEVERE, "Exception: ", e);
         } catch (IOException e) {
             log.log(Level.SEVERE, "Exception: ", e);
         } catch (SAXException e) {
             log.log(Level.SEVERE, "Exception: ", e);
+        }
+    }
+
+    private void initSequence() {
+        if (!authenticationDataDoc.getDocumentElement().hasAttributes()) {
+            authenticationDataDoc.getDocumentElement().setAttribute("lastUserId", Integer.toString(0));
+            authenticationDataDoc.getDocumentElement().setAttribute("lastDialogId", Integer.toString(0));
+        }
+        else {
+            sequenceUserId = Integer.parseInt(authenticationDataDoc.getDocumentElement().getAttribute("lastUserId"));
+            sequenceDialogId = Integer.parseInt(authenticationDataDoc.getDocumentElement().getAttribute("lastDialogId"));
         }
     }
 
@@ -196,7 +211,9 @@ public class XMLDatabase implements Database {
     }
 
     @Override
-    public void addMessage(Message message, int dialogId) throws IOException, SAXException {
+    public void addMessage(Message message) throws IOException, SAXException {
+        int dialogId = message.getDialogId();
+
         if (!dialogDocs.containsKey(dialogId)) {
             dialogDocs.put(dialogId, getDialogDoc(dialogId));
         }
@@ -208,13 +225,17 @@ public class XMLDatabase implements Database {
         Element authorIdElement = dialogDoc.createElement("authorId");
         authorIdElement.appendChild(dialogDoc.createTextNode(Integer.toString(message.getAuthorId())));
 
+        Element authorNameElement = dialogDoc.createElement("authorName");
+        authorNameElement.appendChild(dialogDoc.createTextNode(message.getAuthorName()));
+
         Element textElement = dialogDoc.createElement("text");
         textElement.appendChild(dialogDoc.createTextNode(message.getText()));
 
-        Element timeElement = dialogDoc.createElement("text");
+        Element timeElement = dialogDoc.createElement("time");
         timeElement.appendChild(dialogDoc.createTextNode(message.getDateReceipt().toString()));
 
         messageElement.appendChild(authorIdElement);
+        messageElement.appendChild(authorNameElement);
         messageElement.appendChild(textElement);
         messageElement.appendChild(timeElement);
 
@@ -255,11 +276,27 @@ public class XMLDatabase implements Database {
 
         dialog.setId(Integer.parseInt(dialogDoc.getDocumentElement().getAttribute("id")));
 
+        NodeList nodeList = dialogDoc.getDocumentElement().getChildNodes();
+
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (node.getNodeName().equals("users")){
+                NodeList usersId = node.getChildNodes();
+                for (int j = 0; j < usersId.getLength(); j++) {
+                    if (usersId.item(j).getNodeName().equals("userId")){
+                        dialog.addUser(Integer.parseInt(usersId.item(j).getTextContent()));
+                    }
+                }
+                break;
+            }
+        }
+
         for (int i = 0; i < messageList.getLength(); i++) {
             Node message = messageList.item(i);
             switch (message.getNodeName()) {
                 case "message" :
                     int authorId = -1;
+                    String authorName = null;
                     String text = null;
                     ZonedDateTime time = null;
 
@@ -270,6 +307,8 @@ public class XMLDatabase implements Database {
                             case "authorId":
                                 authorId = Integer.parseInt(value.getTextContent());
                                 break;
+                            case "authorName":
+                                authorName = value.getTextContent();
                             case "text":
                                 text = value.getTextContent();
                                 break;
@@ -279,7 +318,7 @@ public class XMLDatabase implements Database {
                         }
                     }
 
-                    dialog.addMessage(new UserMessage(authorId, text, time));
+                    dialog.addMessage(new UserMessage(authorId, authorName, dialog.getId(), text, time));
                     break;
             }
         }
@@ -372,7 +411,7 @@ public class XMLDatabase implements Database {
                 if (id == userId) {
                     String name = null;
                     String email = null;
-                    List<Integer> dialogsIdSet = new ArrayList<>();
+                    List<Integer> dialogsIdList = new ArrayList<>();
 
                     for(int j = 0; j < values.getLength(); j++) {
                         Node value = values.item(j);
@@ -386,13 +425,16 @@ public class XMLDatabase implements Database {
                             NodeList dialogsId = value.getChildNodes();
                             for (int k = 0; k < dialogsId.getLength(); k++) {
                                 Node dialogId = dialogsId.item(k);
-                                dialogsIdSet.add(Integer.parseInt(dialogId.getTextContent()));
+                                if (dialogId.getNodeName().equals("dialogId")) {
+                                    Integer.parseInt(dialogId.getTextContent());
+                                    dialogsIdList.add(Integer.parseInt(dialogId.getTextContent()));
+                                }
                             }
                         }
                     }
 
                     log.info("Found: " + id + " " + name);
-                    return new UserIM(id, name, email, dialogsIdSet);
+                    return new UserIM(id, name, email, dialogsIdList);
                 }
             }
         }
@@ -425,12 +467,14 @@ public class XMLDatabase implements Database {
 
     @Override
     public int getSequenceUserId() {
-        return sequenceUserId++;
+        authenticationDataDoc.getDocumentElement().setAttribute("lastUserId", Integer.toString(++sequenceUserId));
+        return sequenceUserId;
     }
 
     @Override
     public int getSequenceDialogId() {
-        return sequenceDialogId++;
+        authenticationDataDoc.getDocumentElement().setAttribute("lastDialogId", Integer.toString(++sequenceDialogId));
+        return sequenceDialogId;
     }
 
 }

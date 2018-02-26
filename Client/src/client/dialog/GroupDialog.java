@@ -1,24 +1,29 @@
 package client.dialog;
 
+import client.PairUserIdUserName;
 import client.message.Message;
-import client.user.User;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.*;
 
 public class GroupDialog implements Dialog {
     private int id;
 
-    private List<Message> messages;
+    private ObservableList<Message> messages;
+
+    private List<PairUserIdUserName> pairsUserIdUserName;
 
     public GroupDialog() {
-        messages = new ArrayList<>();
+        messages = FXCollections.observableList(new ArrayList<>());
+        pairsUserIdUserName = new ArrayList<>();
     }
 
     public GroupDialog(int id) {
         this.id = id;
-        messages = new ArrayList<>();
+        messages = FXCollections.observableList(new ArrayList<>());
+        pairsUserIdUserName = new ArrayList<>();
     }
 
     public void setId(int id) {
@@ -31,12 +36,23 @@ public class GroupDialog implements Dialog {
     }
 
     @Override
+    public List<PairUserIdUserName> getPairsUserIdUserName() {
+        return pairsUserIdUserName;
+    }
+
+
+    @Override
     public void addMessage(Message message) {
         messages.add(message);
     }
 
     @Override
-    public List<Message> getMessages() {
+    public void addUser(int userId, String name) {
+        pairsUserIdUserName.add(new PairUserIdUserName(userId, name));
+    }
+
+    @Override
+    public ObservableList<Message> getMessages() {
         return messages;
     }
 
@@ -74,9 +90,15 @@ public class GroupDialog implements Dialog {
 
     @Override
     public String toString() {
-        return "GroupDialog{" +
-                "id=" + id +
-                ", messages=" + messages +
-                '}';
+        StringBuilder str = new StringBuilder();
+        str.append(id);
+        str.append("\n");
+        for (int i = 0; i < pairsUserIdUserName.size(); i++) {
+            str.append(pairsUserIdUserName.get(i).getUserName());
+            if (i != pairsUserIdUserName.size()-1) {
+                str.append(" ,");
+            }
+        }
+        return str.toString();
     }
 }

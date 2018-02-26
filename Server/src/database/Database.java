@@ -26,7 +26,7 @@ public interface Database {
 
     void addNewUserToDialog(int dialogId, int userId) throws IOException, SAXException;
 
-    void addMessage(Message message, int dialogId) throws IOException, SAXException;
+    void addMessage(Message message) throws IOException, SAXException;
 
     boolean removeDialog(int id);
 

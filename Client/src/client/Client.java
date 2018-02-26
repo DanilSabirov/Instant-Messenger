@@ -19,7 +19,7 @@ public interface Client {
 
     void searchUser(String namePrefix);
 
-    boolean sendMessage(Message message);
+    boolean sendMessage(Message message) throws XMLStreamException;
 
     void createDialog(int dialogId);
 

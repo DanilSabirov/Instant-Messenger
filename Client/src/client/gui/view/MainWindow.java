@@ -3,7 +3,10 @@ package client.gui.view;
 import client.Client;
 import client.dialog.Dialog;
 import client.gui.MainController;
+import client.message.Message;
 import client.user.User;
+import client.user.UserIM;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.*;
@@ -11,11 +14,20 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 
 
 public class MainWindow {
     @FXML
     ListView dialogs;
+
+    ListView foundUsers;
+
+    @FXML
+    VBox leftPanel;
+
+    @FXML
+    VBox rightPanel;
 
     @FXML
     ListView messages;
@@ -49,17 +61,54 @@ public class MainWindow {
 
     private ObservableList<User> foundUsersObservableList;
 
+    private int indexCurDialog = -1;
+
     public MainWindow(Client model, MainController controller) {
         this.model = model;
         this.controller = controller;
         dialogsObservableList = model.getDialogs();
         foundUsersObservableList = model.getFoundUsers();
+        foundUsers = new ListView();
     }
 
     public FXMLLoader load(){
         FXMLLoader loader = new FXMLLoader(getClass().getResource("fxml/mainWindow.fxml"));
         loader.setController(this);
         return loader;
+    }
+
+    public void init() {
+        dialogs.setItems((ObservableList) dialogsObservableList);
+        dialogs.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        dialogs.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+                indexCurDialog = dialogsObservableList.indexOf(newValue);
+                ListView messagesListView = new ListView(dialogsObservableList.get(indexCurDialog).getMessages());
+                rightPanel.getChildren().set(1, messagesListView);
+            }
+        });
+
+        foundUsers.setItems((ObservableList) foundUsersObservableList);
+
+        foundUsers.setMaxSize(Control.USE_COMPUTED_SIZE, Control.USE_COMPUTED_SIZE);
+        foundUsers.setMinSize(Control.USE_COMPUTED_SIZE, Control.USE_COMPUTED_SIZE);
+        foundUsers.setPrefSize(Control.USE_COMPUTED_SIZE, Control.USE_COMPUTED_SIZE);
+
+        foundUsers.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        foundUsers.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        if(newValue != null) {
+                            controller.createDialog(((User) newValue).getId());
+                        }
+                    }
+                });
+            }
+        });
     }
 
     public String getText(){
@@ -74,32 +123,28 @@ public class MainWindow {
         text.clear();
     }
 
+    public void  clearSearch() {
+        searchField.clear();
+    }
+
     public void setUserInfo() {
         User user = model.getUser();
 
         name.setText(user.getName());
         id.setText(Integer.toString(user.getId()));
         email.setText(user.getEmail());
+    }
 
-        dialogs.setItems((ObservableList) foundUsersObservableList);
-        dialogs.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        dialogs.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
-            @Override
-            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                controller.createDialog(((User) newValue).getId());
-            }
-        });
-        /*dialogsObservableList = FXCollections.observableList(user.getDialogs());
-        dialogs.setItems((ObservableList) dialogsObservableList);
-        dialogs.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        dialogs.getSelectionModel().selectionModeProperty().addListener(new ChangeListener() {
-            @Override
-            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                System.out.println("createDialog");
-                controller.createDialog((Integer) newValue);
-            }
-        });
-*/
+    public void setDialogList() {
+        leftPanel.getChildren().set(1, dialogs);
+    }
+
+    public void setFoundUsersList() {
+        leftPanel.getChildren().set(1, foundUsers);
+    }
+
+    public void clearFoundUserList() {
+        foundUsersObservableList.clear();
     }
 
     @FXML
@@ -109,6 +154,10 @@ public class MainWindow {
 
     @FXML
     private void searchUser() {
-        model.searchUser(searchField.getText());
+        controller.searchUser();
+    }
+
+    public int getIndexCurDialog() {
+        return indexCurDialog;
     }
 }

@@ -1,7 +1,9 @@
 import database.AuthenticationData;
 import database.dialog.Dialog;
+import database.message.Message;
 import database.user.User;
 
+import javax.jws.soap.SOAPBinding;
 import java.util.List;
 import java.util.Set;
 
@@ -17,4 +19,12 @@ public interface Server {
     void start();
 
     int createDialog(Set<Integer> usersId);
+
+    void addMessage(Message message);
+
+    void registerObservable(Observable client);
+
+    void removeObservable(Observable client);
+
+    User getUser(int userId);
 }

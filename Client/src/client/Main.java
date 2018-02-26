@@ -8,9 +8,10 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.ZonedDateTime;
 import java.util.logging.LogManager;
 
 public class Main extends Application{
@@ -18,8 +19,13 @@ public class Main extends Application{
 
     private static Stage stage;
 
+    private static InetAddress host;
+
     public static void main(String[] args) throws UnknownHostException {
+        loadConfig();
+        System.out.println("Address: " + host.toString());
         initLog();
+
         client = new ClientIM(InetAddress.getLocalHost(), 4444);
         Thread thread = new Thread(() -> {
             if (!client.connect()) {
@@ -65,7 +71,7 @@ public class Main extends Application{
         MainController controller = new MainController(client);
         try {
             setScene("IM", controller.getLoader());
-            controller.setUserInfo();
+            controller.initWindow();
         } catch (IOException e) {
             e.printStackTrace();
             Runtime.getRuntime().exit(-1);
@@ -84,6 +90,29 @@ public class Main extends Application{
             LogManager.getLogManager().readConfiguration(Main.class.getResourceAsStream("/client/logging.properties"));
         } catch (Exception e) {
             System.err.println("Could not setup logger configuration: " + e.toString());
+        }
+    }
+
+    private static void loadConfig() {
+        FileReader reader = null;
+        BufferedReader bufferedReader = null;
+        try {
+            reader = new FileReader(new File("config.txt"));
+            bufferedReader = new BufferedReader(reader);
+        } catch (FileNotFoundException e) {
+            try {
+                host = InetAddress.getLocalHost();
+                return;
+            } catch (UnknownHostException e1) {
+                e1.printStackTrace();
+            }
+        }
+
+
+        try {
+            host = InetAddress.getByName(bufferedReader.readLine());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

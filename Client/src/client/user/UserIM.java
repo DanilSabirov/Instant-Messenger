@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-public class UserIM implements User {
+public class UserIM implements User, Cloneable {
     private int id;
 
     private String name;
@@ -63,5 +63,11 @@ public class UserIM implements User {
     @Override
     public String toString() {
         return id + "\n" + name;
+    }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        User user = new UserIM(this.id, this.name, this.email);
+        return user;
     }
 }

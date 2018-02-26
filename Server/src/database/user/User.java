@@ -15,4 +15,6 @@ public interface User {
     void setId(int id);
 
     List<Integer> getDialogs();
+
+    void addNewDialog(int dialogId);
 }

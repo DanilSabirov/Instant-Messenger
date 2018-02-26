@@ -1,6 +1,7 @@
 import database.AuthenticationData;
 import database.dialog.Dialog;
 import database.message.Message;
+import database.message.UserMessage;
 import database.user.User;
 import database.user.UserIM;
 
@@ -13,13 +14,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class Listener implements Runnable {
+public class Listener implements Runnable, Observable {
     private static Logger log = Logger.getLogger(Listener.class.getName());
 
     private Socket client;
@@ -40,6 +45,10 @@ public class Listener implements Runnable {
 
     private XMLEventWriter writer;
 
+    private ExecutorService speaker = Executors.newSingleThreadExecutor();
+
+    private User curUser = null;
+
     public Listener(Socket client, Server server) {
         this.client = client;
         this.server = server;
@@ -48,6 +57,7 @@ public class Listener implements Runnable {
     @Override
     public void run() {
         log.info("New connection: " + Thread.currentThread().getId());
+        server.registerObservable(this);
         try {
             clientInput = client.getInputStream();
             clientOutput = client.getOutputStream();
@@ -57,7 +67,6 @@ public class Listener implements Runnable {
             inputFactory = XMLInputFactory.newInstance();
 
             writer = outputFactory.createXMLEventWriter(clientOutput);
-          //  writer = outputFactory.createXMLEventWriter(System.out);
 
             XMLEvent end = eventFactory.createDTD("\n");
             XMLEvent event = eventFactory.createStartElement("", null, "connection");
@@ -69,6 +78,7 @@ public class Listener implements Runnable {
             sendAuthenticationRequest(1);
             listen();
 
+            server.removeObservable(this);
             client.close();
         } catch (XMLStreamException e) {
             log.log(Level.SEVERE, "Exception: ", e);
@@ -80,7 +90,6 @@ public class Listener implements Runnable {
     }
 
     private void listen() throws IOException {
-        User user = null;
         try {
             while (parser.hasNext()){
                 int event = parser.next();
@@ -88,37 +97,76 @@ public class Listener implements Runnable {
                     switch (parser.getLocalName()) {
                         case "authenticationData":
                             log.info("Authentication");
-                            user = server.authenticate(listenAuthenticationData());
-                            sendAuthenticationResponse(user);
+                            final User user = server.authenticate(listenAuthenticationData());
+                            curUser = user;
+                            speaker.submit(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        sendAuthenticationResponse(user);
+                                    } catch (XMLStreamException e) {
+                                        log.log(Level.SEVERE, "Exception: ", e);
+                                    }
+                                }
+                            });
                             break;
                         case "registration":
                             log.info("Registration");
                             AuthenticationData data = listenAuthenticationData();
-                            user = listenUserData();
-                            server.register(user, data);
+                            User regUser = listenUserData();
+                            server.register(regUser, data);
                             break;
                         default:
-                            if (user != null) {
+                            if (curUser != null) {
                                 switch (parser.getLocalName()) {
                                     case "getDialog":
                                         event = parser.next();
-                                        int idDialog = Integer.parseInt(parser.getText());
-                                        if (user.getDialogs().contains(idDialog)) {
-                                            server.getDialog(idDialog);
+                                        int dialogId = Integer.parseInt(parser.getText());
+
+                                        log.info("Dialog request: " + dialogId);
+                                        if (curUser.getDialogs().contains(dialogId)) {
+                                            speaker.submit(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    try {
+                                                        sendDialog(server.getDialog(dialogId));
+                                                    } catch (XMLStreamException e) {
+                                                        log.log(Level.SEVERE, "Exception: ", e);
+                                                    }
+                                                }
+                                            });
                                         }
+                                        break;
                                     case "searchUser":
                                         event = parser.next();
                                         String namePrefix = parser.getText();
-                                        sendFoundUsers(server.searchUsers(namePrefix));
+
+                                        log.info("Search request: " + namePrefix);
+                                        speaker.submit(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                try {
+                                                    sendFoundUsers(server.searchUsers(namePrefix));
+                                                } catch (XMLStreamException e) {
+                                                    log.log(Level.SEVERE, "Exception: ", e);
+                                                }
+                                            }
+                                        });
+                                        break;
                                     case "createDialog":
                                         event = parser.next();
                                         Integer userId = Integer.parseInt(parser.getText());
 
                                         Set<Integer> usersId = new TreeSet<>();
-                                        usersId.add(user.getId());
+                                        usersId.add(curUser.getId());
                                         usersId.add(userId);
-                                        int dialogId = server.createDialog(usersId);
-                                        sendDialog(server.getDialog(dialogId));
+
+                                        log.info("Create dialog request: " + usersId);
+                                        dialogId = server.createDialog(usersId);
+                                        break;
+                                    case "message":
+                                        Message message = listenMessage();
+                                        server.addMessage(message);
                                 }
                             }
                     }
@@ -199,10 +247,47 @@ public class Listener implements Runnable {
         return new UserIM(-1, name, email);
     }
 
+    private Message listenMessage() throws XMLStreamException {
+        int authorId = -1;
+        int dialogId = -1;
+        String text = "";
+
+        while (parser.hasNext()){
+            int event = parser.next();
+            if (event == XMLStreamConstants.START_ELEMENT){
+                switch (parser.getLocalName()) {
+                    case "authorId":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            authorId = Integer.parseInt(parser.getText());
+                        }
+                        break;
+                    case "dialogId":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            dialogId = Integer.parseInt(parser.getText());
+                        }
+                        break;
+                    case "text":
+                        event = parser.next();
+                        if (event == XMLStreamConstants.CHARACTERS) {
+                            text = parser.getText();
+                        }
+                        break;
+                }
+            }
+            else if (event == XMLStreamConstants.END_ELEMENT){
+                if (parser.getLocalName().equals("message")){
+                    break;
+                }
+            }
+        }
+
+        return new UserMessage(authorId, curUser.getName(), dialogId, text, ZonedDateTime.now());
+    }
+
     private void sendAuthenticationRequest(int deep) throws XMLStreamException {
-        XMLEvent end = eventFactory.createDTD("\n");
         XMLEvent tab = eventFactory.createDTD(lPad(deep));
-        XMLEvent event;
 
         writer.add(tab);
         createNode("authentication", "", deep-1);
@@ -251,8 +336,8 @@ public class Listener implements Runnable {
         writer.add(event);
         writer.add(end);
 
-        for (int i = 0; i < users.size(); i++){
-            sendUser(users.get(i), deep+1);
+        for (User user : users) {
+            sendUser(user, deep + 1);
         }
 
         event = eventFactory.createEndElement("", null, "foundUsers");
@@ -298,6 +383,8 @@ public class Listener implements Runnable {
     }
 
     private void sendDialog(Dialog dialog) throws XMLStreamException {
+        log.info("Sending dialog: " + dialog.getId());
+
         int deep = 1;
         XMLEvent end = eventFactory.createDTD("\n");
         XMLEvent tab = eventFactory.createDTD(lPad(deep));
@@ -310,6 +397,27 @@ public class Listener implements Runnable {
 
         createNode("dialogId", Integer.toString(dialog.getId()), deep+1);
         writer.add(end);
+
+        writer.add(eventFactory.createDTD(lPad(deep+1)));
+        event = eventFactory.createStartElement("", null, "usersId");
+        writer.add(event);
+        for (Integer userId: dialog.getUsersId()) {
+            createNode("userId", userId.toString(), deep+2);
+        }
+        writer.add(eventFactory.createDTD(lPad(deep+1)));
+        event = eventFactory.createEndElement("", null, "usersId");
+        writer.add(event);
+
+        writer.add(eventFactory.createDTD(lPad(deep+1)));
+        event = eventFactory.createStartElement("", null, "usersName");
+        writer.add(event);
+        for (Integer userId: dialog.getUsersId()) {
+            createNode("userName", server.getUser(userId).getName(), deep+2);
+        }
+        writer.add(eventFactory.createDTD(lPad(deep+1)));
+        event = eventFactory.createEndElement("", null, "usersName");
+        writer.add(event);
+
 
         for (Message message: dialog.getMessages()) {
             sendMessage(message, deep+1);
@@ -324,6 +432,8 @@ public class Listener implements Runnable {
     }
 
     private void sendMessage(Message message, int deep) throws XMLStreamException {
+        log.info("Sending message: " + message);
+
         XMLEvent end = eventFactory.createDTD("\n");
         XMLEvent tab = eventFactory.createDTD(lPad(deep));
         XMLEvent event;
@@ -334,6 +444,8 @@ public class Listener implements Runnable {
         writer.add(end);
 
         createNode("authorId", Integer.toString(message.getAuthorId()), deep+1);
+        createNode("authorName", message.getAuthorName(), deep+1);
+        createNode("dialogId", Integer.toString(message.getDialogId()), deep+1);
         createNode("text", message.getText(), deep);
         createNode("time", message.getDateReceipt().toString(), deep+1);
 
@@ -341,6 +453,9 @@ public class Listener implements Runnable {
         event = eventFactory.createEndElement("", null, "message");
         writer.add(event);
         writer.add(end);
+
+        writer.flush();
+        log.info("Message sent");
     }
 
     private void createNode(String name, String value, int deep) throws XMLStreamException {
@@ -357,13 +472,49 @@ public class Listener implements Runnable {
         EndElement eElement = eventFactory.createEndElement("", "", name);
         writer.add(eElement);
         writer.add(end);
+
+        writer.flush();
     }
 
     private static String lPad(int deep){
-        StringBuffer s = new StringBuffer();
+        StringBuilder s = new StringBuilder();
         for(int i = 0; i < deep; i++){
             s.append('\t');
         }
         return s.toString();
+    }
+
+    @Override
+    public void notifyOfMessage(Message message) {
+        speaker.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    sendMessage(message, 1);
+                } catch (XMLStreamException e) {
+                    log.log(Level.SEVERE, "Exception: ", e);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void notifyOfDialog(Dialog dialog) {
+        curUser.addNewDialog(dialog.getId());
+        speaker.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    sendDialog(dialog);
+                } catch (XMLStreamException e) {
+                    log.log(Level.SEVERE, "Exception: ", e);
+                }
+            }
+        });
+    }
+
+    @Override
+    public User getUser() {
+        return curUser;
     }
 }

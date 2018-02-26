@@ -2,23 +2,35 @@ package client.message;
 
 
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class UserMessage implements Message {
     private int authorId;
+
+    private String authorName;
+
+    private int dialogId;
 
     private String text;
 
     private ZonedDateTime dateReceipt;
 
-    public UserMessage(int autorId, String text, ZonedDateTime dateReceipt) {
+    public UserMessage(int autorId, String authorName, int dialogId, String text, ZonedDateTime dateReceipt) {
         this.authorId = autorId;
+        this.authorName = authorName;
         this.text = text;
         this.dateReceipt = dateReceipt;
+        this.dialogId = dialogId;
     }
 
     @Override
     public int getAuthorId() {
         return authorId;
+    }
+
+    @Override
+    public int getDialogId() {
+        return dialogId;
     }
 
     @Override
@@ -33,10 +45,6 @@ public class UserMessage implements Message {
 
     @Override
     public String toString() {
-        return "UserMessage{" +
-                "authorId=" + authorId +
-                ", text='" + text + '\'' +
-                ", dateReceipt=" + dateReceipt +
-                '}';
+        return authorName + "\n" + text + "\n" + DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm").format(dateReceipt);
     }
 }
