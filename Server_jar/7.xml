@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dialog id="7">
+    <users>
+        <userId>3</userId>
+        <userId>6</userId>
+    </users>
+    <message>
+        <authorId>3</authorId>
+        <authorName>Ann</authorName>
+        <text>test</text>
+        <time>2018-02-26T22:08:51.543+04:00[Europe/Samara]</time>
+    </message>
+</dialog>
