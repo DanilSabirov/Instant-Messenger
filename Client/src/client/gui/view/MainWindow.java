@@ -42,6 +42,9 @@ public class MainWindow {
     Button searchButton;
 
     @FXML
+    Button back;
+
+    @FXML
     TextField searchField;
 
     @FXML
@@ -86,6 +89,7 @@ public class MainWindow {
                 indexCurDialog = dialogsObservableList.indexOf(newValue);
                 ListView messagesListView = new ListView(dialogsObservableList.get(indexCurDialog).getMessages());
                 rightPanel.getChildren().set(1, messagesListView);
+                setDisableMessagesWindow(false);
             }
         });
 
@@ -147,6 +151,16 @@ public class MainWindow {
         foundUsersObservableList.clear();
     }
 
+    public void setDisableBackButton(boolean value) {
+        back.setDisable(value);
+    }
+
+    public void setDisableMessagesWindow(boolean value) {
+        messages.setDisable(value);
+        send.setDisable(value);
+        text.setDisable(value);
+    }
+
     @FXML
     private void sendMessage(ActionEvent actionEvent) {
         controller.sendMessage();
@@ -156,6 +170,9 @@ public class MainWindow {
     private void searchUser() {
         controller.searchUser();
     }
+
+    @FXML
+    private void onBack() {controller.back();}
 
     public int getIndexCurDialog() {
         return indexCurDialog;

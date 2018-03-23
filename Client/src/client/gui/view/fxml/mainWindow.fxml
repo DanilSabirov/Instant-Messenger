@@ -19,11 +19,15 @@
                <children>
                   <HBox>
                      <children>
-                        <TextField fx:id="searchField" promptText="user id or name" />
-                        <Button fx:id="searchButton" mnemonicParsing="false" onAction="#searchUser" text="Button" />
+                        <TextField fx:id="searchField" promptText="name" />
+                        <Button fx:id="searchButton" mnemonicParsing="false" onAction="#searchUser" prefHeight="26.0" prefWidth="150.0" text="Search">
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin></Button>
                      </children>
                   </HBox>
                   <ListView fx:id="dialogs" />
+                  <Button fx:id="back" disable="true" mnemonicParsing="false" onAction="#onBack" text="Back" />
                </children>
             </VBox>
          </children></AnchorPane>

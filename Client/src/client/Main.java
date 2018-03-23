@@ -1,6 +1,7 @@
 package client;
 
 import client.gui.AuthorizationController;
+import client.gui.ConnectionController;
 import client.gui.MainController;
 import client.gui.RegistrationController;
 import javafx.application.Application;
@@ -28,9 +29,7 @@ public class Main extends Application{
 
         client = new ClientIM(InetAddress.getLocalHost(), 4444);
         Thread thread = new Thread(() -> {
-            if (!client.connect()) {
-                Runtime.getRuntime().exit(-1);
-            }
+            while (!client.connect());
         });
         thread.start();
         launch(args);
@@ -39,6 +38,7 @@ public class Main extends Application{
     @Override
     public void start(Stage primaryStage) throws Exception {
         stage = primaryStage;
+        setConnectionScene();
     }
 
     @Override
@@ -72,6 +72,16 @@ public class Main extends Application{
         try {
             setScene("IM", controller.getLoader());
             controller.initWindow();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Runtime.getRuntime().exit(-1);
+        }
+    }
+
+    public static void setConnectionScene() {
+        ConnectionController controller = new ConnectionController();
+        try {
+            setScene("Connection", controller.getLoader());
         } catch (IOException e) {
             e.printStackTrace();
             Runtime.getRuntime().exit(-1);

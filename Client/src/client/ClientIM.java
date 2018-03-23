@@ -89,9 +89,11 @@ public class ClientIM implements Client {
             server.close();
             log.info("Connection closed");
         } catch (XMLStreamException e) {
-            log.log(Level.SEVERE, "Exception: ", e);
+            log.info("Connection lost");
+            Platform.runLater(() -> Main.setConnectionScene());
+            return false;
         } catch (IOException e) {
-            log.log(Level.SEVERE, "Exception: ", e);
+          //  log.log(Level.SEVERE, "Exception: ", e);
             return false;
         }
 
@@ -99,47 +101,43 @@ public class ClientIM implements Client {
     }
 
     @Override
-    public void listenServer() {
-        try {
-            while (parser.hasNext()){
-                int event = parser.next();
-                if (event == XMLStreamConstants.START_ELEMENT){
-                    switch (parser.getLocalName()){
-                        case "authentication":
-                            Platform.runLater(() -> Main.setAuthorizationScene());
-                            break;
-                        case "authenticationResponse":
-                            if (listenAuthenticationResponse()) {
-                                for (Integer i: user.getDialogs()) {
-                                    sendGetDialogRequest(i);
-                                }
-                            }
-                            break;
-                        case "dialog":
-                            Dialog dialog = listenDialog();
-                            if (!dialogs.contains(dialog)) {
-                                Platform.runLater(() -> dialogs.add(dialog));
-                            }
-                            break;
-                        case "foundUsers":
-                            List<User> userList= listenFoundUsers();
-                            Platform.runLater(() -> foundUsers.addAll(userList));
-                            break;
-                        case "message":
-                            Message message = listenMessage();
-                            Platform.runLater(() -> dialogs.get(foundDialogIndex(message.getDialogId())).addMessage(message));
-                            break;
-                    }
-                }
-                else if (event == XMLStreamConstants.END_ELEMENT){
-                    if (parser.getLocalName().equals("connection")) {
+    public void listenServer() throws XMLStreamException {
+        while (parser.hasNext()) {
+            int event = parser.next();
+            if (event == XMLStreamConstants.START_ELEMENT) {
+                switch (parser.getLocalName()) {
+                    case "authentication":
+                        Platform.runLater(() -> Main.setAuthorizationScene());
                         break;
-                    }
+                    case "authenticationResponse":
+                        if (listenAuthenticationResponse()) {
+                            for (Integer i : user.getDialogs()) {
+                                sendGetDialogRequest(i);
+                            }
+                        }
+                        break;
+                    case "dialog":
+                        Dialog dialog = listenDialog();
+                        if (!dialogs.contains(dialog)) {
+                            Platform.runLater(() -> dialogs.add(dialog));
+                        }
+                        break;
+                    case "foundUsers":
+                        List<User> userList = listenFoundUsers();
+                        Platform.runLater(() -> foundUsers.addAll(userList));
+                        break;
+                    case "message":
+                        Message message = listenMessage();
+                        Platform.runLater(() -> dialogs.get(foundDialogIndex(message.getDialogId())).addMessage(message));
+                        break;
+                }
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("connection")) {
+                    break;
                 }
             }
-        } catch (XMLStreamException e) {
-            log.log(Level.SEVERE, "Exception: ", e);
         }
+
     }
 
     @Override
@@ -183,9 +181,9 @@ public class ClientIM implements Client {
         writer.add(tab);
         writer.add(event);
         writer.add(end);
-        createNode("authorId", Integer.toString(message.getAuthorId()), deep+1);
-        createNode("dialogId", Integer.toString(message.getDialogId()), deep+1);
-        createNode("text", message.getText(), deep+1);
+        createNode("authorId", Integer.toString(message.getAuthorId()), deep + 1);
+        createNode("dialogId", Integer.toString(message.getDialogId()), deep + 1);
+        createNode("text", message.getText(), deep + 1);
         event = eventFactory.createEndElement("", null, "message");
         writer.add(tab);
         writer.add(event);
@@ -209,7 +207,7 @@ public class ClientIM implements Client {
     }
 
     @Override
-    public User getUser(){
+    public User getUser() {
         return user;
     }
 
@@ -222,16 +220,16 @@ public class ClientIM implements Client {
     public void closeConnection() {
         try {
             XMLEvent event;
-            event = eventFactory.createEndElement("", null,"connection");
+            event = eventFactory.createEndElement("", null, "connection");
             writer.add(event);
 
             writer.flush();
         } catch (XMLStreamException e) {
-            log.log(Level.SEVERE, "Exception: ", e);
+            log.info("Connection already closed");
         }
     }
 
-    public void getDialog(int dialogId){
+    public void getDialog(int dialogId) {
         if (!dialogs.contains(new GroupDialog(dialogId))) {
             try {
                 sendGetDialogRequest(dialogId);
@@ -273,9 +271,8 @@ public class ClientIM implements Client {
                         dialogsId = listenDialogsId();
                         break;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("user")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("user")) {
                     break;
                 }
             }
@@ -295,9 +292,8 @@ public class ClientIM implements Client {
                         users.add(listenUserData());
                         break;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("foundUsers")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("foundUsers")) {
                     break;
                 }
             }
@@ -309,9 +305,9 @@ public class ClientIM implements Client {
     private List<Integer> listenDialogsId() throws XMLStreamException {
         ArrayList<Integer> idSet = new ArrayList<>();
 
-        while (parser.hasNext()){
+        while (parser.hasNext()) {
             int event = parser.next();
-            if (event == XMLStreamConstants.START_ELEMENT){
+            if (event == XMLStreamConstants.START_ELEMENT) {
                 switch (parser.getLocalName()) {
                     case "dialogId":
                         event = parser.next();
@@ -320,9 +316,8 @@ public class ClientIM implements Client {
                         }
                         break;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("dialogsId")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("dialogsId")) {
                     break;
                 }
             }
@@ -343,9 +338,8 @@ public class ClientIM implements Client {
                     case "error":
                         return false;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("authenticationResponse")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("authenticationResponse")) {
                     break;
                 }
             }
@@ -380,9 +374,8 @@ public class ClientIM implements Client {
                         dialog.addMessage(listenMessage());
                         break;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("dialog")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("dialog")) {
                     break;
                 }
             }
@@ -400,16 +393,15 @@ public class ClientIM implements Client {
 
         while (parser.hasNext()) {
             int event = parser.next();
-            if(event == XMLStreamConstants.START_ELEMENT) {
+            if (event == XMLStreamConstants.START_ELEMENT) {
                 switch (parser.getLocalName()) {
                     case "userName":
                         event = parser.next();
                         users.add(parser.getText());
                         break;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("usersName")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("usersName")) {
                     break;
                 }
             }
@@ -423,16 +415,15 @@ public class ClientIM implements Client {
 
         while (parser.hasNext()) {
             int event = parser.next();
-            if(event == XMLStreamConstants.START_ELEMENT) {
+            if (event == XMLStreamConstants.START_ELEMENT) {
                 switch (parser.getLocalName()) {
                     case "userId":
                         event = parser.next();
                         users.add(Integer.parseInt(parser.getText()));
                         break;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("usersId")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("usersId")) {
                     break;
                 }
             }
@@ -450,9 +441,9 @@ public class ClientIM implements Client {
         String text = "";
         ZonedDateTime time = null;
 
-        while (parser.hasNext()){
+        while (parser.hasNext()) {
             int event = parser.next();
-            if (event == XMLStreamConstants.START_ELEMENT){
+            if (event == XMLStreamConstants.START_ELEMENT) {
                 switch (parser.getLocalName()) {
                     case "authorId":
                         event = parser.next();
@@ -481,14 +472,13 @@ public class ClientIM implements Client {
                     case "time":
                         event = parser.next();
                         if (event == XMLStreamConstants.CHARACTERS) {
-             //               time = ZonedDateTime.parse(parser.getText());
+                            //               time = ZonedDateTime.parse(parser.getText());
                             time = ZonedDateTime.now();
                         }
                         break;
                 }
-            }
-            else if (event == XMLStreamConstants.END_ELEMENT){
-                if (parser.getLocalName().equals("message")){
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                if (parser.getLocalName().equals("message")) {
                     break;
                 }
             }
@@ -513,9 +503,9 @@ public class ClientIM implements Client {
         writer.add(tab);
         writer.add(event);
         writer.add(end);
-        createNode("id", Integer.toString(user.getId()), deep+1);
-        createNode("name", user.getName(), deep+1);
-        createNode("email", user.getEmail(), deep+1);
+        createNode("id", Integer.toString(user.getId()), deep + 1);
+        createNode("name", user.getName(), deep + 1);
+        createNode("email", user.getEmail(), deep + 1);
         event = eventFactory.createEndElement("", null, "user");
         writer.add(tab);
         writer.add(event);
@@ -559,8 +549,8 @@ public class ClientIM implements Client {
         writer.add(tab);
         writer.add(event);
         writer.add(end);
-        createNode("login", authenticationData.getLogin(), deep+1);
-        createNode("password", new String(authenticationData.getPassword()), deep+1);
+        createNode("login", authenticationData.getLogin(), deep + 1);
+        createNode("password", new String(authenticationData.getPassword()), deep + 1);
         event = eventFactory.createEndElement("", null, "authenticationData");
         writer.add(tab);
         writer.add(event);
@@ -576,8 +566,10 @@ public class ClientIM implements Client {
         writer.add(end);
 
         writer.flush();
-    }     ZonedDateTime z = ZonedDateTime.now();
-        ZonedDateTime t = ZonedDateTime.parse(z.toString());
+    }
+
+    ZonedDateTime z = ZonedDateTime.now();
+    ZonedDateTime t = ZonedDateTime.parse(z.toString());
 
     private void createNode(String name, String value, int deep) throws XMLStreamException {
         XMLEvent end = eventFactory.createDTD("\n");
@@ -606,9 +598,9 @@ public class ClientIM implements Client {
         throw new IllegalArgumentException();
     }
 
-    private static String lPad(int deep){
+    private static String lPad(int deep) {
         StringBuilder s = new StringBuilder();
-        for(int i = 0; i < deep; i++){
+        for (int i = 0; i < deep; i++) {
             s.append('\t');
         }
         return s.toString();

@@ -10,7 +10,6 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
 
-
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="220.0" prefWidth="301.0" xmlns="http://javafx.com/javafx/9" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <GridPane layoutX="7.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -32,7 +31,7 @@
                   <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                </padding>
             </Label>
-            <Label text="Passwod" GridPane.rowIndex="1">
+            <Label text="Password" GridPane.rowIndex="1">
                <padding>
                   <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                </padding>
@@ -62,10 +61,10 @@
                   <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                </padding>
             </Button>
-            <TextField fx:id="login" GridPane.columnIndex="1" />
-            <TextField fx:id="name" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+            <TextField fx:id="login" promptText="at least 3 characters" GridPane.columnIndex="1" />
+            <TextField fx:id="name" promptText="at least 3 characters" GridPane.columnIndex="1" GridPane.rowIndex="3" />
             <TextField fx:id="email" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-            <PasswordField fx:id="passwordFirst" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <PasswordField fx:id="passwordFirst" promptText="at least 6 characters" GridPane.columnIndex="1" GridPane.rowIndex="1" />
             <PasswordField fx:id="passwordSecond" GridPane.columnIndex="1" GridPane.rowIndex="2" />
          </children>
          <padding>

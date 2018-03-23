@@ -42,6 +42,7 @@ public class MainController {
             model.searchUser(window.getSearchUser());
             window.setFoundUsersList();
             window.clearSearch();
+            window.setDisableBackButton(false);
         }
     }
 
@@ -49,10 +50,17 @@ public class MainController {
         model.createDialog(dialogId);
         window.setDialogList();
         window.clearFoundUserList();
+        window.setDisableBackButton(true);
     }
 
     public void initWindow() {
         window.init();
         window.setUserInfo();
+        window.setDisableMessagesWindow(true);
+    }
+
+    public void back() {
+        window.setDisableBackButton(true);
+        window.setDialogList();
     }
 }
